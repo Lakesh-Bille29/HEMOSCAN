@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile - HemoScan</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="toast-container"></div>
+
+    <nav class="nav-bar">
+        <div class="nav-brand">
+            <h2>🧠 HemoScan</h2>
+        </div>
+        <div class="nav-links">
+            <a href="dashboard.html">Dashboard</a>
+            <a href="profile.html" class="active">Profile</a>
+            <a href="#" onclick="logout()">Logout</a>
+        </div>
+    </nav>
+
+    <div class="main-content" style="max-width: 800px;">
+        <h1 style="margin-bottom: 2rem;">Profile Settings</h1>
+
+        <div class="card">
+            <h3 style="margin-bottom: 1.5rem;">Personal Information</h3>
+            <form id="profile-form">
+                <div class="form-group">
+                    <label>Email Address (Cannot be changed)</label>
+                    <input type="email" id="profile-email" class="form-control" disabled>
+                </div>
+                <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" id="profile-name" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Specialization</label>
+                    <input type="text" id="profile-spec" class="form-control" placeholder="e.g. Neurologist">
+                </div>
+                <div style="margin-top: 2rem;">
+                    <button type="submit" class="btn btn-primary" id="btn-update">Save Changes</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="card mt-3">
+            <h3 style="margin-bottom: 1.5rem;">App Preferences</h3>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h4 style="margin: 0; color: var(--text-primary);">Dark Mode</h4>
+                    <p style="color: var(--text-secondary); margin: 0; font-size: 0.9rem;">Toggle dark theme for the website.</p>
+                </div>
+                <div>
+                    <button id="toggle-dark" class="btn btn-outline">Enable Dark Mode</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const userStr = localStorage.getItem('hemoscan_user');
+            if (!userStr) {
+                window.location.href = 'index.html';
+                return;
+            }
+
+            const user = JSON.parse(userStr);
+            document.getElementById('profile-email').value = user.email;
+            document.getElementById('profile-name').value = user.name;
+            document.getElementById('profile-spec').value = user.specialty || '';
+
+            // Handle Update
+            document.getElementById('profile-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const btn = document.getElementById('btn-update');
+                btn.innerHTML = '<span class="spinner"></span> Saving...';
+                btn.disabled = true;
+
+                const formData = new FormData();
+                formData.append('email', user.email);
+                formData.append('name', document.getElementById('profile-name').value);
+                formData.append('specialty', document.getElementById('profile-spec').value);
+                // The Android app also supports updating profile image via update_profile.php 
+                // We'll leave the image upload out for simplicity, backend should handle partial updates.
+
+                try {
+                    const response = await fetch(`${API_BASE}update_profile.php`, {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const data = await response.json();
+
+                    if (data.status === 'success') {
+                        showToast(data.message);
+                        user.name = document.getElementById('profile-name').value;
+                        user.specialty = document.getElementById('profile-spec').value;
+                        localStorage.setItem('hemoscan_user', JSON.stringify(user));
+                    } else {
+                        showToast(data.message, 'error');
+                    }
+                } catch (error) {
+                    showToast("Failed to update profile.", "error");
+                } finally {
+                    btn.innerHTML = 'Save Changes';
+                    btn.disabled = false;
+                }
+            });
+
+            // Handle Dark Mode
+            const toggleDarkBtn = document.getElementById('toggle-dark');
+            const isDark = localStorage.getItem("hemoscan_dark_mode") === "true";
+            
+            if (isDark) {
+                toggleDarkBtn.innerText = "Disable Dark Mode";
+            } else {
+                toggleDarkBtn.innerText = "Enable Dark Mode";
+            }
+
+            toggleDarkBtn.addEventListener('click', () => {
+                const currentIsDark = document.body.classList.toggle('dark-mode');
+                localStorage.setItem('hemoscan_dark_mode', currentIsDark);
+                
+                if (currentIsDark) {
+                    toggleDarkBtn.innerText = "Disable Dark Mode";
+                } else {
+                    toggleDarkBtn.innerText = "Enable Dark Mode";
+                }
+            });
+        });
+    </script>
+</body>
+</html>

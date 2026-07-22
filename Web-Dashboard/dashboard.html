@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - HemoScan</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="toast-container"></div>
+
+    <nav class="nav-bar">
+        <div class="nav-brand">
+            <h2>🧠 HemoScan</h2>
+        </div>
+        <div class="nav-links">
+            <a href="dashboard.html" class="active">Dashboard</a>
+            <a href="profile.html">Profile</a>
+            <a href="#" onclick="logout()">Logout</a>
+        </div>
+    </nav>
+
+    <div class="main-content">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+            <div>
+                <h1 id="welcome-message">Welcome, Doctor</h1>
+                <p style="color: var(--text-secondary);">Here is an overview of your recent patient scans.</p>
+            </div>
+        </div>
+
+        <div class="dashboard-stats">
+            <div class="card stat-card">
+                <div class="stat-icon total">📊</div>
+                <div class="stat-info">
+                    <h3 id="stat-total">0</h3>
+                    <p>Total Scans</p>
+                </div>
+            </div>
+            <div class="card stat-card">
+                <div class="stat-icon normal">✅</div>
+                <div class="stat-info">
+                    <h3 id="stat-normal">0</h3>
+                    <p>Normal Results</p>
+                </div>
+            </div>
+            <div class="card stat-card">
+                <div class="stat-icon abnormal">⚠️</div>
+                <div class="stat-info">
+                    <h3 id="stat-abnormal">0</h3>
+                    <p>Abnormal Results</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3 style="margin-bottom: 1.5rem;">Recent Scans</h3>
+            <div style="overflow-x: auto;">
+                <table id="scans-table">
+                    <thead>
+                        <tr>
+                            <th>Patient ID</th>
+                            <th>Patient Name</th>
+                            <th>Age / Gender</th>
+                            <th>Date</th>
+                            <th>Result</th>
+                            <th>Risk Level</th>
+                        </tr>
+                    </thead>
+                    <tbody id="scans-tbody">
+                        <tr>
+                            <td colspan="6" class="text-center">Loading...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const userStr = localStorage.getItem('hemoscan_user');
+            if (!userStr) {
+                window.location.href = 'index.html';
+                return;
+            }
+
+            const user = JSON.parse(userStr);
+            document.getElementById('welcome-message').innerText = `Welcome, ${user.name}`;
+
+            try {
+                const response = await fetch(`${API_BASE}get_scans.php?doctor_email=${encodeURIComponent(user.email)}`);
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    const scans = data.data;
+                    document.getElementById('stat-total').innerText = scans.length;
+                    
+                    let normalCount = 0;
+                    let abnormalCount = 0;
+                    
+                    const tbody = document.getElementById('scans-tbody');
+                    tbody.innerHTML = '';
+
+                    if (scans.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="6" class="text-center">No scans found.</td></tr>';
+                    }
+
+                    scans.forEach(scan => {
+                        if (scan.result.toLowerCase().includes('normal') && !scan.result.toLowerCase().includes('abnormal')) {
+                            normalCount++;
+                        } else {
+                            abnormalCount++;
+                        }
+
+                        const tr = document.createElement('tr');
+                        const isNormal = scan.result.toLowerCase().includes('normal') && !scan.result.toLowerCase().includes('abnormal');
+                        const badgeClass = isNormal ? 'badge-normal' : 'badge-abnormal';
+
+                        tr.innerHTML = `
+                            <td><strong>${scan.patient_id}</strong></td>
+                            <td>${scan.patient_name}</td>
+                            <td>${scan.patient_age} / ${scan.patient_gender}</td>
+                            <td>${scan.date_added}</td>
+                            <td><span class="badge ${badgeClass}">${scan.result}</span></td>
+                            <td>${scan.risk_level}</td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+
+                    document.getElementById('stat-normal').innerText = normalCount;
+                    document.getElementById('stat-abnormal').innerText = abnormalCount;
+                } else {
+                    document.getElementById('scans-tbody').innerHTML = `<tr><td colspan="6" class="text-center text-error">${data.message}</td></tr>`;
+                }
+            } catch (error) {
+                console.error(error);
+                document.getElementById('scans-tbody').innerHTML = `<tr><td colspan="6" class="text-center text-error">Failed to load data.</td></tr>`;
+            }
+        });
+    </script>
+</body>
+</html>
