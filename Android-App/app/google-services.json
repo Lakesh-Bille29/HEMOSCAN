@@ -1,0 +1,54 @@
+{
+  "_README": [
+    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+    "THIS IS A PLACEHOLDER — NOT A REAL google-services.json",
+    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+    "",
+    "To enable push notifications, follow these 4 steps:",
+    "",
+    "STEP 1: Go to https://console.firebase.google.com",
+    "STEP 2: Create a project (or select existing) → Add Android App",
+    "        Package name: com.example.brainhemorrhage",
+    "",
+    "STEP 3: Download the real google-services.json from Firebase Console",
+    "        Project Settings → Your Apps → Android app → Download",
+    "",
+    "STEP 4: Replace THIS file with the downloaded google-services.json",
+    "        Location: app/google-services.json  (same folder as this file)",
+    "",
+    "STEP 5: In config.php, add your FCM Server Key:",
+    "        Firebase Console → Project Settings → Cloud Messaging → Server key",
+    "        define('FCM_SERVER_KEY', 'AAAAXXXXXXX:APA91b...');",
+    "",
+    "The app will build and run WITHOUT this file during development.",
+    "Firebase-specific features (push notifications) will simply be skipped.",
+    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  ],
+  "project_info": {
+    "project_number": "000000000000",
+    "project_id": "hemoscan-PLACEHOLDER",
+    "storage_bucket": "hemoscan-PLACEHOLDER.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:000000000000:android:PLACEHOLDER00000000000",
+        "android_client_info": {
+          "package_name": "com.example.brainhemorrhage"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "PLACEHOLDER_API_KEY_REPLACE_THIS"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
