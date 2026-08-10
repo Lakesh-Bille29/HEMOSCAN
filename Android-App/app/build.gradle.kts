@@ -37,6 +37,10 @@ android {
 }
 
 dependencies {
+    implementation(libs.androidx.navigation.fragment)
+    implementation(libs.androidx.navigation.navigation.fragment)
+    implementation(libs.androidx.navigation.navigation.ui)
+    implementation(libs.androidx.navigation.ui)
     implementation(libs.appcompat)
     implementation(libs.material)
     implementation(libs.activity)

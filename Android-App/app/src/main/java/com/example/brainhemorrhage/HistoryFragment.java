@@ -22,6 +22,9 @@ import retrofit2.Response;
 import android.content.Context;
 import android.content.SharedPreferences;
 import androidx.appcompat.widget.Toolbar;
+import androidx.recyclerview.widget.ItemTouchHelper;
+import android.widget.Toast;
+import com.example.brainhemorrhage.api.BaseResponse;
 
 public class HistoryFragment extends Fragment {
 
@@ -112,6 +115,53 @@ public class HistoryFragment extends Fragment {
         patientsRecyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
         patientsRecyclerView.setAdapter(patientsAdapter);
 
+        // Attach ItemTouchHelper for swipe-to-delete
+        ItemTouchHelper.SimpleCallback swipeCallback = new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT) {
+            @Override
+            public boolean onMove(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder, @NonNull RecyclerView.ViewHolder target) {
+                return false;
+            }
+
+            @Override
+            public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
+                int position = viewHolder.getBindingAdapterPosition();
+                if (position == RecyclerView.NO_POSITION) return;
+
+                List<ScanItem> currentList = patientsAdapter.getData();
+                if (position >= currentList.size()) return;
+
+                ScanItem itemToDelete = currentList.get(position);
+                SharedPreferences prefs = requireActivity().getSharedPreferences("HemoScanPrefs", Context.MODE_PRIVATE);
+                String doctorEmail = prefs.getString("email", "");
+
+                // Call backend API to delete scan
+                BrainScanApi api = RetrofitClient.getRetrofitInstance(requireContext()).create(BrainScanApi.class);
+                api.deleteScan(String.valueOf(itemToDelete.getId()), doctorEmail).enqueue(new Callback<BaseResponse>() {
+                    @Override
+                    public void onResponse(Call<BaseResponse> call, Response<BaseResponse> response) {
+                        if (response.isSuccessful() && response.body() != null && "success".equals(response.body().getStatus())) {
+                            patientsAdapter.removeItem(position);
+                            Toast.makeText(getContext(), "Scan deleted", Toast.LENGTH_SHORT).show();
+                            if (patientsAdapter.getItemCount() == 0 && emptyStateLayout != null) {
+                                emptyStateLayout.setVisibility(View.VISIBLE);
+                                patientsRecyclerView.setVisibility(View.GONE);
+                            }
+                        } else {
+                            patientsAdapter.notifyItemChanged(position); // reset swipe if failed
+                            Toast.makeText(getContext(), "Failed to delete scan", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(Call<BaseResponse> call, Throwable t) {
+                        patientsAdapter.notifyItemChanged(position); // reset swipe if failed
+                        Toast.makeText(getContext(), "Network error deleting scan", Toast.LENGTH_SHORT).show();
+                    }
+                });
+            }
+        };
+        new ItemTouchHelper(swipeCallback).attachToRecyclerView(patientsRecyclerView);
+
         fetchPatientsFromBackend();
     }
 
@@ -131,7 +181,7 @@ public class HistoryFragment extends Fragment {
         SharedPreferences prefs = requireActivity().getSharedPreferences("HemoScanPrefs", Context.MODE_PRIVATE);
         String doctorEmail = prefs.getString("email", "");
 
-        com.example.brainhemorrhage.api.BrainScanApi api = com.example.brainhemorrhage.api.RetrofitClient.getRetrofitInstance().create(com.example.brainhemorrhage.api.BrainScanApi.class);
+        com.example.brainhemorrhage.api.BrainScanApi api = com.example.brainhemorrhage.api.RetrofitClient.getRetrofitInstance(requireContext()).create(com.example.brainhemorrhage.api.BrainScanApi.class);
         api.getPatientScans(doctorEmail, null, null, null, null).enqueue(new retrofit2.Callback<com.example.brainhemorrhage.api.ScanResponse>() {
             @Override
             public void onResponse(retrofit2.Call<com.example.brainhemorrhage.api.ScanResponse> call, retrofit2.Response<com.example.brainhemorrhage.api.ScanResponse> response) {
@@ -170,31 +220,21 @@ public class HistoryFragment extends Fragment {
                             }
                         }
                     } else {
-                        // Group scans by patient_id to show a unique list of patients
-                        java.util.Map<String, ScanItem> patientMap = new java.util.LinkedHashMap<>();
+                        // Display all individual scan records (matching Dashboard total count)
                         for (com.example.brainhemorrhage.api.ScanResponse.ScanItemDto dto : dtos) {
-                            String patientKey = dto.getPatient_id();
-                            if (patientKey == null || patientKey.isEmpty()) {
-                                patientKey = dto.getPatient_name() + "\u0000"
-                                           + dto.getPatient_age()  + "\u0000"
-                                           + dto.getPatient_gender();
-                            }
-                            if (!patientMap.containsKey(patientKey)) {
-                                ScanItem item = new ScanItem(
-                                    Integer.parseInt(dto.getId()),
-                                    dto.getDoctor_email(),
-                                    dto.getPatient_name(),
-                                    dto.getResult(),
-                                    dto.getDate_added(),
-                                    dto.getImage_path()
-                                );
-                                item.setAge(dto.getPatient_age());
-                                item.setGender(dto.getPatient_gender());
-                                item.setDbPatientId(dto.getPatient_id());
-                                patientMap.put(patientKey, item);
-                            }
+                            ScanItem item = new ScanItem(
+                                Integer.parseInt(dto.getId()),
+                                dto.getDoctor_email(),
+                                dto.getPatient_name(),
+                                dto.getResult(),
+                                dto.getDate_added(),
+                                dto.getImage_path()
+                            );
+                            item.setAge(dto.getPatient_age());
+                            item.setGender(dto.getPatient_gender());
+                            item.setDbPatientId(dto.getPatient_id());
+                            displayList.add(item);
                         }
-                        displayList.addAll(patientMap.values());
                     }
                     
                     if (displayList.isEmpty()) {

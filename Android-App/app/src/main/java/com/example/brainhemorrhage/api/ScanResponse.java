@@ -4,10 +4,14 @@ import java.util.List;
 
 public class ScanResponse {
     private String status;
+    private long server_time;
     private List<ScanItemDto> data;
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+
+    public long getServerTime() { return server_time; }
+    public void setServerTime(long server_time) { this.server_time = server_time; }
 
     public List<ScanItemDto> getData() { return data; }
     public void setData(List<ScanItemDto> data) { this.data = data; }

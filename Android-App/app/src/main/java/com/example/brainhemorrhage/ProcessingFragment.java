@@ -29,6 +29,8 @@ import okhttp3.MultipartBody;
 import okhttp3.RequestBody;
 import java.io.InputStream;
 import java.io.FileOutputStream;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -275,21 +277,7 @@ public class ProcessingFragment extends Fragment {
                             try {
                                 if (finalImageUri != null) {
                                     Uri uri = Uri.parse(finalImageUri);
-                                    File file = null;
-
-                                    if ("file".equals(uri.getScheme())) {
-                                        file = new File(uri.getPath());
-                                    } else if ("content".equals(uri.getScheme())) {
-                                        file = new File(requireContext().getCacheDir(), "upload_temp_" + System.currentTimeMillis() + ".jpg");
-                                        try (InputStream is = requireContext().getContentResolver().openInputStream(uri);
-                                             FileOutputStream fos = new FileOutputStream(file)) {
-                                            byte[] buffer = new byte[4096];
-                                            int read;
-                                            while ((read = is.read(buffer)) != -1) {
-                                                fos.write(buffer, 0, read);
-                                            }
-                                        }
-                                    }
+                                    File file = getCompressedTempFile(uri);
 
                                     if (file != null && file.exists()) {
                                         RequestBody requestFile = RequestBody.create(MediaType.parse("image/jpeg"), file);
@@ -437,6 +425,36 @@ public class ProcessingFragment extends Fragment {
             R.drawable.ic_check_circle, 0, 0, 0);
         detailItem.setCompoundDrawablePadding(16);
         detailsContainer.addView(detailItem);
+    }
+
+    private File getCompressedTempFile(Uri uri) {
+        try {
+            InputStream is = requireContext().getContentResolver().openInputStream(uri);
+            Bitmap bitmap = BitmapFactory.decodeStream(is);
+            if (is != null) is.close();
+
+            if (bitmap == null) return null;
+
+            int maxDim = 1024;
+            int width = bitmap.getWidth();
+            int height = bitmap.getHeight();
+            if (width > maxDim || height > maxDim) {
+                float ratio = Math.min((float) maxDim / width, (float) maxDim / height);
+                int newW = Math.round(width * ratio);
+                int newH = Math.round(height * ratio);
+                bitmap = Bitmap.createScaledBitmap(bitmap, newW, newH, true);
+            }
+
+            File tempFile = new File(requireContext().getCacheDir(), "upload_scan_" + System.currentTimeMillis() + ".jpg");
+            FileOutputStream fos = new FileOutputStream(tempFile);
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 80, fos);
+            fos.flush();
+            fos.close();
+            return tempFile;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 
     @Override

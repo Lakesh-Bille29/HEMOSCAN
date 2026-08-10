@@ -76,7 +76,7 @@ MODEL_DETECTOR   = os.path.join(MODELS_DIR, "hemorrhage_detector.tflite")
 MODEL_SUBTYPE    = os.path.join(MODELS_DIR, "Hemorrhage.tflite")
 
 # ── Thresholds matching DetectorHelper.java ───────────────────────────────────
-CONFIDENCE_THRESHOLD = 0.60
+CONFIDENCE_THRESHOLD = 0.35
 IOU_THRESHOLD        = 0.25
 
 

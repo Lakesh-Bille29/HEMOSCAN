@@ -181,7 +181,14 @@ try {
     $mail->Password   = SMTP_PASSWORD;
     $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
     $mail->Port       = SMTP_PORT;
-    $mail->Timeout    = 15;
+    // SSL stream options to bypass local certificate verification issues
+    $mail->SMTPOptions = [
+        'ssl' => [
+            'verify_peer'       => false,
+            'verify_peer_name'  => false,
+            'allow_self_signed' => true
+        ]
+    ];
 
     // Disable SMTP debug output in production
     $mail->SMTPDebug = 0;
@@ -214,19 +221,28 @@ try {
 if ($mail_sent) {
     echo json_encode([
         "status"  => "success",
-        "message" => "A 6-digit verification code has been sent to {$email}. Please check your inbox."
+        "message" => "A 6-digit verification code has been sent to {$email}. Please check your inbox (and spam folder).",
     ]);
 } else {
-    // SMTP failed — return a generic message (never expose the OTP in the response)
-    $dev_note = !empty($mail_error) ? " SMTP error logged." : "";
-    // Log full SMTP error for developer review
+    // SMTP failed — log the full error but return a meaningful error to the user
+    // so they know the email was NOT delivered (do NOT silently swallow the failure)
     file_put_contents(__DIR__ . '/otp_log.txt',
         sprintf("[%s] OTP SEND FAILED for %s — Code: %s — SMTP: %s\n",
             date('Y-m-d H:i:s'), $email, $otp_code, $mail_error),
         FILE_APPEND);
+
+    // Detect common failure reasons for user-friendly messages
+    $user_hint = "Our email service could not deliver the code. Please try again in a moment.";
+    if (strpos($mail_error, 'authenticate') !== false) {
+        $user_hint = "Email server authentication failed. Please contact support.";
+    } elseif (strpos($mail_error, 'connect') !== false || strpos($mail_error, 'getaddrinfo') !== false) {
+        $user_hint = "Could not reach the email server. Please check your internet connection and try again.";
+    }
+
     echo json_encode([
-        "status"  => "success",
-        "message" => "OTP generated. Check your email inbox or the server OTP log.{$dev_note}"
+        "status"  => "error",
+        "message" => "Failed to send verification email to {$email}. {$user_hint}",
+        "error_detail" => $mail_error   // shown in dev tools / app logs for debugging
     ]);
 }
 

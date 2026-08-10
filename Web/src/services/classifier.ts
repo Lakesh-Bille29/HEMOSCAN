@@ -70,13 +70,16 @@ const drawBoundingBox = async (
   const ctx = canvas.getContext('2d')!;
   ctx.drawImage(img, 0, 0);
 
-  const scaleX = canvas.width  / box.inputSize;
-  const scaleY = canvas.height / box.inputSize;
+  // Support both normalized (0-1) and pixel (0-inputSize) coordinates
+  const normCx = box.cx > 1.0 ? box.cx / box.inputSize : box.cx;
+  const normCy = box.cy > 1.0 ? box.cy / box.inputSize : box.cy;
+  const normW  = box.w  > 1.0 ? box.w  / box.inputSize : box.w;
+  const normH  = box.h  > 1.0 ? box.h  / box.inputSize : box.h;
 
-  const left   = (box.cx - box.w / 2) * scaleX;
-  const top    = (box.cy - box.h / 2) * scaleY;
-  const right  = (box.cx + box.w / 2) * scaleX;
-  const bottom = (box.cy + box.h / 2) * scaleY;
+  const left   = (normCx - normW / 2) * canvas.width;
+  const top    = (normCy - normH / 2) * canvas.height;
+  const right  = (normCx + normW / 2) * canvas.width;
+  const bottom = (normCy + normH / 2) * canvas.height;
 
   // Red bounding box
   ctx.strokeStyle = '#FF0000';
@@ -212,7 +215,7 @@ export const processBrainScan = async (
 
 interface MockBox { x: number; y: number; w: number; h: number; conf: number; }
 
-const drawMockBox = (
+export const drawMockBox = (
   img: HTMLImageElement,
   box: MockBox
 ): { url: string; blob: Blob } => {
@@ -251,7 +254,7 @@ const drawMockBox = (
  * imports, but it now always returns a server-offline rejection.
  * @deprecated — not called from processBrainScan any more.
  */
-const runMockSimulation = async (
+export const runMockSimulation = async (
   _imageUrl: string,
   _imageFile: File
 ): Promise<ScanResult> => {

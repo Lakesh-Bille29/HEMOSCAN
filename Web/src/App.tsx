@@ -1,30 +1,29 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence, useMotionValue, useSpring } from 'framer-motion';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Activity, Upload, Search, Settings, LogOut, User, AlertTriangle, CheckCircle,
-  ChevronRight, ArrowLeft, Lock, Mail, Smartphone, Users, Database, Shield,
-  Building2, BadgeCheck, Wifi, Brain, Zap, TrendingUp, Eye, Clock, Filter,
-  RefreshCw, Download, MoreHorizontal, Bell, Moon, Sun, Globe, Star,
-  HeartPulse, ScanLine, Microscope, FlaskConical, FileText, Info, X, Plus
+  ChevronRight, ArrowLeft, Lock, Mail, Smartphone, Database, Shield,
+  Building2, BadgeCheck, Wifi, Brain, Zap, TrendingUp, Eye,
+  RefreshCw, Bell, Moon, Sun, Globe, Star,
+  HeartPulse, ScanLine, Microscope, FileText, Info, X, Plus, Trash2
 } from 'lucide-react';
 import { apiService, getApiBaseUrl } from './services/api';
-import type { ScanItemDto } from './services/api';
+import type { ScanItemDto, NotificationItem } from './services/api';
 import { initializeModels, processBrainScan } from './services/classifier';
 import type { ScanResult } from './services/classifier';
-import { useTranslation } from 'react-i18next';
 import { useFCM } from './hooks/useFCM';
-import { ScanHistorySkeletonList, DashboardSkeletonGrid } from './components/SkeletonLoader';
+import i18n, { getLanguageCode } from './i18n';
 
 // ─── Route type ───────────────────────────────────────────────────────────────
 type Route = 'splash' | 'login' | 'signup' | 'forgot-password' | 'dashboard' | 'new-scan' | 'history' | 'settings';
 
 // ─── Animation Presets ────────────────────────────────────────────────────────
-const fadeUp   = { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } };
-const fadeIn   = { hidden: { opacity: 0 },         show: { opacity: 1 } };
-const scaleIn  = { hidden: { opacity: 0, scale: 0.94 }, show: { opacity: 1, scale: 1 } };
-const slideRight = { hidden: { opacity: 0, x: -16 }, show: { opacity: 1, x: 0 } };
+export const fadeUp   = { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } };
+export const fadeIn   = { hidden: { opacity: 0 },         show: { opacity: 1 } };
+export const scaleIn  = { hidden: { opacity: 0, scale: 0.94 }, show: { opacity: 1, scale: 1 } };
+export const slideRight = { hidden: { opacity: 0, x: -16 }, show: { opacity: 1, x: 0 } };
 
-const stagger = (delay = 0.06) => ({
+export const stagger = (delay = 0.06) => ({
   show: { transition: { staggerChildren: delay } }
 });
 
@@ -62,12 +61,11 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
 
 // ─── Main App ─────────────────────────────────────────────────────────────────
 export default function App() {
-  const { t } = useTranslation();
   const [currentRoute, setCurrentRoute] = useState<Route>('splash');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const [dashboardLoading, setDashboardLoading] = useState(true);
-  const [historyLoading, setHistoryLoading] = useState(true);
+  const [_dashboardLoading, setDashboardLoading] = useState(true);
+  const [_historyLoading, setHistoryLoading] = useState(true);
 
   // Auth
   const [loginEmail, setLoginEmail] = useState('');
@@ -99,6 +97,15 @@ export default function App() {
   const [stats, setStats] = useState({ total: 0, normal: 0, abnormal: 0 });
   const [selectedScan, setSelectedScan] = useState<ScanItemDto | null>(null);
 
+  // Notifications (synced from backend — shared with Android)
+  const [_notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [_notifLoading, setNotifLoading] = useState(false);
+
+  // Delta-sync baseline: stores server_time from last successful scan fetch
+  const lastSyncTimeRef = useRef<number>(0);
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   // Search & Filter
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'total' | 'normal' | 'abnormal'>('total');
@@ -129,11 +136,12 @@ export default function App() {
   const [editPhotoPreview, setEditPhotoPreview] = useState<string | null>(null);
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
   const [showNotificationsPanel, setShowNotificationsPanel] = useState(false);
+  const [showNotifDropdown, setShowNotifDropdown] = useState(false);
   const [mlStatus, setMlStatus] = useState('Initializing AI models...');
-  const [mlReady, setMlReady] = useState(false);
+  const [_mlReady, setMlReady] = useState(false);
 
   // Settings sub-pages
-  type SettingsSubPage = null | 'privacy' | 'terms' | 'faq' | 'contact' | 'app-info' | 'change-password';
+  type SettingsSubPage = null | 'privacy' | 'terms' | 'faq' | 'contact' | 'app-info' | 'about-us' | 'change-password';
   const [settingsSubPage, setSettingsSubPage] = useState<SettingsSubPage>(null);
   const [faqOpenIndex, setFaqOpenIndex] = useState<number | null>(null);
   // Contact Support form
@@ -210,7 +218,9 @@ export default function App() {
               hemoscan_theme_mode: String(res.theme_mode || 0)
             }).forEach(([k, v]) => v && localStorage.setItem(k, v));
             setCurrentRoute('dashboard');
+            i18n.changeLanguage(getLanguageCode(res.language || 'English'));
             fetchDashboardData(savedEmail);
+            fetchNotifications(savedEmail);
           } else {
             localStorage.clear();
             setCurrentRoute('login');
@@ -242,7 +252,7 @@ export default function App() {
   }, []);
 
   // ── Dashboard Data ──────────────────────────────────────────────────────────
-  const fetchDashboardData = async (email: string, ignoreCache = false) => {
+  const fetchDashboardData = useCallback(async (email: string, ignoreCache = false) => {
     setDashboardLoading(true);
     setHistoryLoading(true);
     try {
@@ -256,13 +266,104 @@ export default function App() {
         });
         setStats({ total: res.data.length, normal, abnormal });
         setRecentScans(res.data.slice(0, 5));
+        // Store server_time as baseline for next delta sync
+        if (res.server_time) lastSyncTimeRef.current = res.server_time;
       }
     } catch (e) { console.error('Failed to load scans', e); }
     finally {
       setDashboardLoading(false);
       setHistoryLoading(false);
     }
-  };
+  }, []);
+
+  // ── Load Notifications from backend ────────────────────────────────────────
+  const fetchNotifications = useCallback(async (email: string) => {
+    setNotifLoading(true);
+    try {
+      const res = await apiService.getNotifications(email);
+      if (res.status === 'success') {
+        setNotifications(res.data);
+        setUnreadCount(res.unread_count);
+      }
+    } catch (e) { console.error('Failed to load notifications', e); }
+    finally { setNotifLoading(false); }
+  }, []);
+
+  // ── Delete Scan (cross-platform) ────────────────────────────────────────────
+  const handleDeleteScan = useCallback(async (scanId: string) => {
+    if (!doctor?.email) return;
+    if (!window.confirm('Delete this scan record? This cannot be undone.')) return;
+    try {
+      const res = await apiService.deleteScan(scanId, doctor.email);
+      if (res.status === 'success') {
+        setScans(prev => prev.filter(s => s.id !== scanId));
+        setRecentScans(prev => prev.filter(s => s.id !== scanId));
+        setStats(prev => {
+          const deleted = scans.find(s => s.id === scanId);
+          const wasAbnormal = deleted?.result?.toLowerCase().includes('abnormal') ?? false;
+          return {
+            total: prev.total - 1,
+            normal: wasAbnormal ? prev.normal : prev.normal - 1,
+            abnormal: wasAbnormal ? prev.abnormal - 1 : prev.abnormal,
+          };
+        });
+        setMessage({ type: 'success', text: 'Scan deleted successfully.' });
+        if (selectedScan?.id === scanId) setSelectedScan(null);
+      } else {
+        setMessage({ type: 'error', text: res.message || 'Failed to delete scan.' });
+      }
+    } catch (e) {
+      setMessage({ type: 'error', text: 'Network error while deleting scan.' });
+    }
+  }, [doctor?.email, scans, selectedScan]);
+
+  // ── 30-second polling for new/updated scans (delta sync) ───────────────────
+  useEffect(() => {
+    if (!doctor?.email) {
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+      return;
+    }
+
+    const email = doctor.email;
+
+    const doPoll = async () => {
+      try {
+        // Use delta sync: only fetch scans newer than last known server_time
+        const since = lastSyncTimeRef.current;
+        const url = `${getApiBaseUrl()}get_scans.php?doctor_email=${encodeURIComponent(email)}&since=${since}`;
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data.status === 'success' && data.data && data.data.length > 0) {
+          // Merge new/updated scans into the list (newest first, no duplicates)
+          setScans(prev => {
+            const existingIds = new Set(prev.map((s: ScanItemDto) => s.id));
+            const newItems = data.data.filter((s: ScanItemDto) => !existingIds.has(s.id));
+            if (newItems.length === 0) return prev;
+            const merged = [...newItems, ...prev];
+            let normal = 0, abnormal = 0;
+            merged.forEach((s: ScanItemDto) => {
+              if (s.result?.toLowerCase().includes('abnormal')) abnormal++; else normal++;
+            });
+            setStats({ total: merged.length, normal, abnormal });
+            setRecentScans(merged.slice(0, 5));
+            return merged;
+          });
+        }
+        if (data.server_time) lastSyncTimeRef.current = data.server_time;
+
+        // Also refresh notification badge
+        const notifRes = await apiService.getNotifications(email);
+        if (notifRes.status === 'success') {
+          setUnreadCount(notifRes.unread_count);
+        }
+      } catch (_) { /* silent — offline */ }
+    };
+
+    pollIntervalRef.current = setInterval(doPoll, 30_000); // 30-second interval
+    return () => {
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+    };
+  }, [doctor?.email]);
 
 
   // ── Auth ────────────────────────────────────────────────────────────────────
@@ -298,6 +399,7 @@ export default function App() {
         setLoginPassword('');
         setCurrentRoute('dashboard');
         fetchDashboardData(loginEmail, true);
+        fetchNotifications(loginEmail);
       } else { setMessage({ type: 'error', text: res.message }); }
     } catch { setMessage({ type: 'error', text: 'Connection failed. Is the server running?' }); }
     finally { setLoading(false); }
@@ -546,6 +648,9 @@ export default function App() {
 
   const updatePref = async (key: string, value: number | string) => {
     setDoctor(prev => prev ? { ...prev, [key]: value } : null);
+    if (key === 'language') {
+      i18n.changeLanguage(getLanguageCode(String(value)));
+    }
     try { await apiService.updateProfile(doctor?.email || '', undefined, undefined, null, { [key]: value }); }
     catch {}
   };
@@ -1074,6 +1179,90 @@ export default function App() {
                     <span style={{ fontSize: '11px', color: 'var(--text-quaternary)', lineHeight: 1.2 }}>{doctor?.specialty || 'Radiologist'}</span>
                   </div>
                 </motion.button>
+
+                <div style={{ position: 'relative' }}>
+                  <motion.button
+                    whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
+                    onClick={() => {
+                      fetchNotifications(doctor?.email || '');
+                      setShowNotifDropdown(!showNotifDropdown);
+                    }}
+                    style={{ position: 'relative', width: 36, height: 36, borderRadius: '10px', border: '1px solid var(--border-subtle)', background: 'var(--surface-0)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--text-tertiary)' }}
+                    title={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
+                  >
+                    <Bell size={15} />
+                    {unreadCount > 0 && (
+                      <span style={{
+                        position: 'absolute', top: '-4px', right: '-4px',
+                        minWidth: '16px', height: '16px', borderRadius: '8px',
+                        background: 'var(--danger)', color: '#fff',
+                        fontSize: '10px', fontWeight: 700,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        padding: '0 4px', lineHeight: 1
+                      }}>
+                        {unreadCount > 99 ? '99+' : unreadCount}
+                      </span>
+                    )}
+                  </motion.button>
+
+                  {showNotifDropdown && (
+                    <div style={{
+                      position: 'absolute', top: '44px', right: 0, width: '320px',
+                      background: 'var(--surface-0)', border: '1px solid var(--border-subtle)',
+                      borderRadius: '12px', boxShadow: '0 10px 30px rgba(0,0,0,0.15)',
+                      zIndex: 1000, padding: '16px'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', paddingBottom: '8px', borderBottom: '1px solid var(--border-subtle)' }}>
+                        <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)' }}>Notifications</span>
+                        {unreadCount > 0 && doctor?.email && (
+                          <button
+                            onClick={async () => {
+                              await apiService.markNotificationRead(doctor.email, 'all');
+                              fetchNotifications(doctor.email);
+                            }}
+                            style={{ background: 'none', border: 'none', color: 'var(--brand-600)', fontSize: '11.5px', fontWeight: 600, cursor: 'pointer' }}
+                          >
+                            Mark all read
+                          </button>
+                        )}
+                      </div>
+
+                      {_notifications.length === 0 ? (
+                        <div style={{ padding: '20px 0', textAlign: 'center', fontSize: '13px', color: 'var(--text-quaternary)' }}>
+                          No notifications yet
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '280px', overflowY: 'auto' }}>
+                          {_notifications.map((n) => (
+                            <div key={n.id} style={{
+                              padding: '10px 12px', borderRadius: '8px',
+                              background: n.is_read ? 'var(--surface-1)' : 'var(--brand-50)',
+                              border: '1px solid var(--border-subtle)',
+                              display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px'
+                            }}>
+                              <div>
+                                <div style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--text-primary)' }}>{n.title}</div>
+                                <div style={{ fontSize: '11.5px', color: 'var(--text-tertiary)', marginTop: '2px', lineHeight: 1.3 }}>{n.body}</div>
+                                <div style={{ fontSize: '10px', color: 'var(--text-quaternary)', marginTop: '4px' }}>{n.created_at}</div>
+                              </div>
+                              {n.is_read === 0 && doctor?.email && (
+                                <button
+                                  onClick={async () => {
+                                    await apiService.markNotificationRead(doctor.email, n.id);
+                                    fetchNotifications(doctor.email);
+                                  }}
+                                  style={{ background: 'none', border: 'none', color: 'var(--brand-600)', fontSize: '11px', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}
+                                >
+                                  Mark read
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
 
                 <motion.button
                   whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
@@ -1704,8 +1893,8 @@ export default function App() {
                         <table className="data-table">
                           <thead>
                             <tr>
-                              {['Patient ID', 'Name', 'Gender', 'Age', 'Diagnosis', 'Risk Level', 'Date'].map(h => (
-                                <th key={h}>{h}</th>
+                              {['Patient ID', 'Name', 'Gender', 'Age', 'Diagnosis', 'Risk Level', 'Date', ''].map((h, hi) => (
+                                <th key={hi}>{h}</th>
                               ))}
                             </tr>
                           </thead>
@@ -1736,6 +1925,23 @@ export default function App() {
                                     </span>
                                   </td>
                                   <td style={{ color: 'var(--text-quaternary)', fontSize: '12.5px' }}>{scan.date_added}</td>
+                                  <td onClick={e => e.stopPropagation()}>
+                                    <button
+                                      id={`delete-scan-${scan.id}`}
+                                      onClick={() => handleDeleteScan(scan.id)}
+                                      title="Delete scan"
+                                      style={{
+                                        background: 'none', border: '1px solid var(--border-subtle)',
+                                        borderRadius: '7px', padding: '5px 8px', cursor: 'pointer',
+                                        color: 'var(--danger)', display: 'flex', alignItems: 'center',
+                                        opacity: 0.7, transition: 'opacity 0.15s, background 0.15s'
+                                      }}
+                                      onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '1'; (e.currentTarget as HTMLButtonElement).style.background = 'rgba(239,68,68,0.08)'; }}
+                                      onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '0.7'; (e.currentTarget as HTMLButtonElement).style.background = 'none'; }}
+                                    >
+                                      <Trash2 size={13} />
+                                    </button>
+                                  </td>
                                 </motion.tr>
                               );
                             })}
@@ -1821,6 +2027,7 @@ export default function App() {
                         </div>
                       )}
                     </div>
+
 
                     {/* App Preferences */}
                     <div>
@@ -1980,10 +2187,17 @@ export default function App() {
                           </div>
                           <ChevronRight size={15} color="var(--text-quaternary)" />
                         </div>
+                        <div className="settings-row" id="about-us-row" onClick={() => setSettingsSubPage('about-us')}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <HeartPulse size={17} color="var(--brand-500)" />
+                            <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>About Us</span>
+                          </div>
+                          <ChevronRight size={15} color="var(--text-quaternary)" />
+                        </div>
                         <div className="settings-row" id="app-info-row" onClick={() => setSettingsSubPage('app-info')}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                             <Info size={17} color="var(--brand-500)" />
-                            <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>App Info</span>
+                            <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>App Information</span>
                           </div>
                           <ChevronRight size={15} color="var(--text-quaternary)" />
                         </div>
@@ -2192,11 +2406,83 @@ export default function App() {
                                 <div style={{ fontSize: '14px', color: 'var(--text-primary)', fontWeight: 500 }}>{doctor?.email}</div>
                               </div>
                               <button type="submit" disabled={contactLoading || contactMessage.length < 20} className="btn-primary" style={{ width: '100%' }} id="contact-submit-btn">
-                                {contactLoading ? <><div className="animate-spin" style={{ width: 15, height: 15, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', display: 'inline-block', marginRight: '8px' }} />Opening email client...</> : <><Mail size={15} style={{ marginRight: '6px', display: 'inline' }} />Send Support Request</>}
+                                {contactLoading ? <><div className="animate-spin" style={{ width: 15, height: 15, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', display: 'inline-block', marginRight: '8px' }} />Submitting...</> : <><Mail size={15} style={{ marginRight: '6px', display: 'inline' }} />Submit Support Request</>}
                               </button>
-                              <p style={{ fontSize: '12px', color: 'var(--text-quaternary)', textAlign: 'center' }}>This will open your email client pre-filled with your message addressed to support@hemoscan.ai</p>
+                              <p style={{ fontSize: '12px', color: 'var(--text-quaternary)', textAlign: 'center' }}>Your ticket will be submitted instantly. You'll receive a confirmation email with your ticket number at <strong>{doctor?.email}</strong>.</p>
                             </form>
                           )}
+                        </div>
+                      </motion.div>
+                    )}
+
+                    {/* About Us */}
+                    {settingsSubPage === 'about-us' && (
+                      <motion.div key="about-us" initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }} transition={{ duration: 0.3, ease: [0.16,1,0.3,1] }}>
+                        <button onClick={() => setSettingsSubPage(null)} style={{ background: 'none', border: 'none', color: 'var(--brand-600)', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', marginBottom: '14px', fontSize: '13px', fontWeight: 600 }}>
+                          <ArrowLeft size={14} /> Back to Settings
+                        </button>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                          {/* Hero */}
+                          <div className="card" style={{ padding: '36px 28px', textAlign: 'center', background: 'linear-gradient(145deg, var(--brand-50) 0%, var(--surface-0) 60%, var(--brand-50) 100%)' }}>
+                            <div style={{ width: 88, height: 88, borderRadius: '28px', background: 'linear-gradient(135deg, var(--brand-500) 0%, var(--brand-700) 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', boxShadow: '0 10px 32px rgba(99,102,241,0.35)' }}>
+                              <Brain size={44} color="#fff" />
+                            </div>
+                            <h2 style={{ fontSize: '26px', fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '-0.5px', marginBottom: '8px' }}>HemoScan AI</h2>
+                            <p style={{ fontSize: '14px', color: 'var(--brand-600)', fontWeight: 600, marginBottom: '12px' }}>Intelligent Brain Hemorrhage Diagnostics</p>
+                            <p style={{ fontSize: '13.5px', color: 'var(--text-tertiary)', lineHeight: 1.7, maxWidth: '460px', margin: '0 auto' }}>We help doctors detect and classify brain hemorrhages in seconds using advanced AI — putting cutting-edge diagnostic technology directly in the hands of clinicians.</p>
+                          </div>
+
+                          {/* Our Mission */}
+                          <div className="card" style={{ padding: '24px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+                              <Zap size={20} color="var(--brand-500)" />
+                              <span style={{ fontSize: '16px', fontWeight: 800, color: 'var(--text-primary)' }}>Our Mission</span>
+                            </div>
+                            <p style={{ fontSize: '13.5px', color: 'var(--text-tertiary)', lineHeight: 1.75, margin: 0 }}>Every second counts in neuro-diagnostics. HemoScan exists to bridge the gap between AI technology and clinical practice — giving radiologists and physicians a reliable second opinion at the speed of thought. We believe that faster, more accurate diagnosis saves lives.</p>
+                          </div>
+
+                          {/* Key Features */}
+                          <div className="card" style={{ padding: '24px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+                              <CheckCircle size={20} color="var(--brand-500)" />
+                              <span style={{ fontSize: '16px', fontWeight: 800, color: 'var(--text-primary)' }}>What HemoScan Does</span>
+                            </div>
+                            {[
+                              { icon: '🧠', title: 'AI-Powered Analysis', desc: 'Analyses brain CT scans in seconds using a multi-stage deep learning pipeline.' },
+                              { icon: '🩸', title: 'Hemorrhage Detection', desc: 'Detects 5 types of intracranial hemorrhage: Epidural, Subdural, Subarachnoid, Intraparenchymal, and Intraventricular.' },
+                              { icon: '📱', title: 'Works on All Devices', desc: 'Available as a web portal and Android app — sync your data across both platforms seamlessly.' },
+                              { icon: '🔒', title: 'Secure & Private', desc: 'Your patient data is encrypted and never shared. We follow medical data security standards.' },
+                              { icon: '📋', title: 'Shareable Reports', desc: 'Generate and share detailed diagnostic reports with your medical team instantly.' },
+                            ].map(({ icon, title, desc }) => (
+                              <div key={title} style={{ display: 'flex', gap: '12px', marginBottom: '14px', paddingBottom: '14px', borderBottom: '1px solid var(--border-subtle)' }}>
+                                <span style={{ fontSize: '22px', lineHeight: 1.3 }}>{icon}</span>
+                                <div>
+                                  <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '3px' }}>{title}</div>
+                                  <div style={{ fontSize: '13px', color: 'var(--text-tertiary)', lineHeight: 1.6 }}>{desc}</div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Contact / Links */}
+                          <div className="card" style={{ overflow: 'hidden' }}>
+                            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-subtle)' }}>
+                              <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-quaternary)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Get in Touch</span>
+                            </div>
+                            {[
+                              { label: 'Support Email', value: 'support@hemoscan.ai', action: () => { window.open('mailto:support@hemoscan.ai', '_blank'); } },
+                              { label: 'Submit a Ticket', value: 'Settings → Contact Support', action: () => { setSettingsSubPage('contact'); } },
+                            ].map(({ label, value, action }) => (
+                              <button key={label} onClick={action} style={{ width: '100%', padding: '13px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-subtle)', background: 'none', border: 'none', cursor: 'pointer', borderRadius: 0 }}>
+                                <span style={{ fontSize: '13.5px', color: 'var(--text-tertiary)', fontWeight: 500 }}>{label}</span>
+                                <span style={{ fontSize: '13px', color: 'var(--brand-600)', fontWeight: 600 }}>{value} →</span>
+                              </button>
+                            ))}
+                          </div>
+
+                          <div style={{ textAlign: 'center', fontSize: '12px', color: 'var(--text-quaternary)', paddingBottom: '4px' }}>
+                            © {new Date().getFullYear()} HemoScan AI · All rights reserved
+                          </div>
                         </div>
                       </motion.div>
                     )}
@@ -2214,27 +2500,26 @@ export default function App() {
                               <Brain size={40} color="#fff" />
                             </div>
                             <h2 style={{ fontSize: '22px', fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '-0.3px' }}>HemoScan AI</h2>
-                            <p style={{ fontSize: '13px', color: 'var(--brand-600)', fontWeight: 600, marginTop: '4px' }}>Clinical Brain Hemorrhage Diagnostics</p>
+                            <p style={{ fontSize: '13px', color: 'var(--brand-600)', fontWeight: 600, marginTop: '4px' }}>Brain Hemorrhage Diagnostic Assistant</p>
                             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', marginTop: '14px', background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: '100px', padding: '6px 16px' }}>
                               <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--success)' }} />
-                              <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>Version 1.0.0 (Build 100)</span>
+                              <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>Version 1.0.0</span>
                             </div>
                           </div>
 
-                          {/* Technical details */}
+                          {/* User-friendly app details */}
                           <div className="card" style={{ overflow: 'hidden' }}>
                             <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-subtle)' }}>
-                              <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-quaternary)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Technical Details</span>
+                              <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-quaternary)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>App Details</span>
                             </div>
                             {[
                               { label: 'App Name', value: 'HemoScan AI' },
                               { label: 'Version', value: '1.0.0' },
-                              { label: 'Build Number', value: '100' },
-                              { label: 'Platform', value: 'Web (React + Vite)' },
-                              { label: 'AI Pipeline', value: '3-Stage TFLite (brain_ct_classifier → YOLO → Hemorrhage)' },
-                              { label: 'Backend', value: 'PHP / MySQL (XAMPP)' },
+                              { label: 'Platform', value: 'Web Application' },
+                              { label: 'AI Capability', value: 'Hemorrhage Detection & Classification' },
                               { label: 'Developer', value: 'HemoScan Development Team' },
-                              { label: 'Support Email', value: 'support@hemoscan.ai' },
+                              { label: 'Support', value: 'support@hemoscan.ai' },
+                              { label: 'Last Updated', value: 'June 2026' },
                             ].map(({ label, value }) => (
                               <div key={label} style={{ padding: '13px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-subtle)' }}>
                                 <span style={{ fontSize: '13.5px', color: 'var(--text-tertiary)', fontWeight: 500 }}>{label}</span>
@@ -2243,23 +2528,23 @@ export default function App() {
                             ))}
                           </div>
 
-                          {/* Changelog */}
+                          {/* What's New */}
                           <div className="card" style={{ padding: '20px 24px' }}>
-                            <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '14px' }}>v1.0.0 — Release Notes</div>
+                            <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '14px' }}>What's New in v1.0.0</div>
                             {[
-                              '✅ 3-stage AI pipeline for CT scan validation + hemorrhage detection + subtype classification',
-                              '✅ Cross-platform sync between Android app and Web Portal',
-                              '✅ Real-time profile, settings and scan history synchronization',
-                              '✅ Premium glassmorphism UI with dark mode support',
-                              '✅ OTP-verified signup and password reset',
-                              '✅ YOLO-based bounding box overlay on detected hemorrhages',
+                              '✅ AI-powered brain CT scan analysis — results in under 30 seconds',
+                              '✅ Detects 5 hemorrhage subtypes with confidence scores',
+                              '✅ Sync data between Android app and Web Portal',
+                              '✅ Dark mode and customisable settings',
+                              '✅ Secure OTP-verified sign-up and password reset',
+                              '✅ Shareable diagnostic reports',
                             ].map((note, i) => (
                               <div key={i} style={{ fontSize: '13px', color: 'var(--text-tertiary)', lineHeight: 1.7, paddingBottom: '4px' }}>{note}</div>
                             ))}
                           </div>
 
                           <div style={{ textAlign: 'center', fontSize: '12px', color: 'var(--text-quaternary)', paddingBottom: '4px' }}>
-                            © 2025 HemoScan AI. All rights reserved.
+                            © {new Date().getFullYear()} HemoScan AI. All rights reserved.
                           </div>
                         </div>
                       </motion.div>

@@ -81,14 +81,28 @@ $stmt->bind_param("ssssssssss", $doctor_email, $patient_id, $patient_name, $pati
 
 if ($stmt->execute()) {
     $inserted_id = $stmt->insert_id;
+
+    // ── Write notification so other devices can detect the new scan via polling ──
+    $notif = $conn->prepare(
+        "INSERT INTO notifications (doctor_email, title, body, type, reference_id)
+         VALUES (?, ?, ?, 'scan_uploaded', ?)"
+    );
+    $notif_title = 'New Scan Uploaded';
+    $notif_body  = 'A new CT scan for ' . $patient_name . ' has been added to your records.';
+    $notif_ref   = (string)$inserted_id;
+    $notif->bind_param("ssss", $doctor_email, $notif_title, $notif_body, $notif_ref);
+    $notif->execute();
+    $notif->close();
+
     echo json_encode([
-        "status" => "success",
-        "message" => "Scan uploaded and saved successfully.",
+        "status"     => "success",
+        "message"    => "Scan uploaded and saved successfully.",
+        "scan_id"    => $inserted_id,
         "patient_id" => $patient_id
     ]);
 } else {
     echo json_encode([
-        "status" => "error",
+        "status"  => "error",
         "message" => "Failed to save scan record to database."
     ]);
 }

@@ -141,7 +141,7 @@ public class SettingsFragment extends Fragment {
         currentThemeText       = view.findViewById(R.id.currentThemeText);
         notificationsLayout    = view.findViewById(R.id.notificationsLayout);
         dataStorageLayout      = view.findViewById(R.id.dataStorageLayout);
-        
+
         shareAppLayout         = view.findViewById(R.id.shareAppLayout);
         rateAppLayout          = view.findViewById(R.id.rateAppLayout);
     }
@@ -164,7 +164,7 @@ public class SettingsFragment extends Fragment {
         if (photoUri != null && !photoUri.isEmpty()) {
             String imageUrl = photoUri;
             if (!imageUrl.startsWith("http") && !imageUrl.startsWith("file") && !imageUrl.startsWith("content")) {
-                imageUrl = RetrofitClient.BASE_URL + imageUrl;
+                imageUrl = RetrofitClient.getBaseUrl() + imageUrl;
             }
             Glide.with(this)
                 .load(imageUrl)
@@ -267,13 +267,43 @@ public class SettingsFragment extends Fragment {
     private void showDataStorageDialog() {
         long cacheSize = getCacheSize();
         String sizeStr = android.text.format.Formatter.formatFileSize(requireContext(), cacheSize);
+        String currentServerUrl = RetrofitClient.getBaseUrl();
+
+        String[] options = {
+            "Clear Temporary Cache (" + sizeStr + ")",
+            "Configure Server API URL"
+        };
 
         new AlertDialog.Builder(requireContext())
                 .setTitle(R.string.title_storage)
-                .setMessage("Temporary cache size: " + sizeStr + "\nClearing cache will remove temporary scan files.")
-                .setPositiveButton(R.string.action_clear_cache, (dialog, which) -> {
-                    clearCache();
-                    showToast("Cache cleared successfully", true);
+                .setItems(options, (dialog, which) -> {
+                    if (which == 0) {
+                        clearCache();
+                        showToast("Cache cleared successfully", true);
+                    } else if (which == 1) {
+                        showServerUrlDialog(currentServerUrl);
+                    }
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void showServerUrlDialog(String currentUrl) {
+        final TextInputEditText input = new TextInputEditText(requireContext());
+        input.setText(currentUrl);
+        input.setHint("e.g. http://192.168.1.6/brainscan_api/");
+        input.setPadding(32, 32, 32, 32);
+
+        new AlertDialog.Builder(requireContext())
+                .setTitle("Server API Endpoint")
+                .setMessage("Enter backend API base URL (must end with /):")
+                .setView(input)
+                .setPositiveButton("Save", (d, w) -> {
+                    String newUrl = input.getText() != null ? input.getText().toString().trim() : "";
+                    if (!newUrl.isEmpty()) {
+                        RetrofitClient.saveServerUrl(requireContext(), newUrl);
+                        showToast("Server URL saved: " + RetrofitClient.getBaseUrl(), true);
+                    }
                 })
                 .setNegativeButton("Cancel", null)
                 .show();
@@ -397,7 +427,7 @@ public class SettingsFragment extends Fragment {
         progressDialog.setCancelable(false);
         progressDialog.show();
 
-        BrainScanApi api = RetrofitClient.getRetrofitInstance().create(BrainScanApi.class);
+        BrainScanApi api = RetrofitClient.getRetrofitInstance(requireContext()).create(BrainScanApi.class);
 
         if (photoUri == null) {
             // ── Text-only update (no photo) ───────────────────────────────────────
@@ -570,7 +600,7 @@ public class SettingsFragment extends Fragment {
 
         showToast("Sending verification code...", true);
 
-        BrainScanApi api = RetrofitClient.getRetrofitInstance().create(BrainScanApi.class);
+        BrainScanApi api = RetrofitClient.getRetrofitInstance(requireContext()).create(BrainScanApi.class);
         api.sendOtp(email, "update_pwd").enqueue(new Callback<BaseResponse>() {
             @Override
             public void onResponse(Call<BaseResponse> call, Response<BaseResponse> response) {
@@ -601,7 +631,7 @@ public class SettingsFragment extends Fragment {
     private void updatePasswordOnBackend(final String email, final String code, final String newPwd) {
         showToast("Updating password...", true);
 
-        BrainScanApi api = RetrofitClient.getRetrofitInstance().create(BrainScanApi.class);
+        BrainScanApi api = RetrofitClient.getRetrofitInstance(requireContext()).create(BrainScanApi.class);
         api.resetPassword(email, code, newPwd).enqueue(new Callback<BaseResponse>() {
             @Override
             public void onResponse(Call<BaseResponse> call, Response<BaseResponse> response) {
@@ -675,7 +705,7 @@ public class SettingsFragment extends Fragment {
             }
             confirmDialog.dismiss();
             String userEmail = prefs.getString("email", "");
-            BrainScanApi api = RetrofitClient.getRetrofitInstance().create(BrainScanApi.class);
+            BrainScanApi api = RetrofitClient.getRetrofitInstance(requireContext()).create(BrainScanApi.class);
             api.deleteAccount(userEmail, pwd).enqueue(new Callback<BaseResponse>() {
                 @Override
                 public void onResponse(Call<BaseResponse> call, Response<BaseResponse> response) {
@@ -716,9 +746,11 @@ public class SettingsFragment extends Fragment {
         String email = prefs.getString("email", "");
         if (email.isEmpty()) return;
 
-        BrainScanApi api = RetrofitClient.getRetrofitInstance().create(BrainScanApi.class);
+        BrainScanApi api = RetrofitClient.getRetrofitInstance(requireContext()).create(BrainScanApi.class);
         
         String name = prefs.getString("name", "");
+        String mobile = prefs.getString("mobile", "");
+        String gender = prefs.getString("gender", "");
         String specialty = prefs.getString("specialty", "");
         String bio = prefs.getString("bio", "");
         String hospital = prefs.getString("hospital", "");
@@ -731,8 +763,8 @@ public class SettingsFragment extends Fragment {
         int vibration = prefs.getBoolean(KEY_VIBRATION, true) ? 1 : 0;
         int themeMode = prefs.getInt("theme_mode", 0);
 
-        api.updateProfileFields(
-                email, name, specialty, bio, hospital, license, yearsExp,
+        api.updateProfileFull(
+                email, name, mobile, gender, specialty, bio, hospital, license, yearsExp,
                 darkMode, language, dailySummary, sound, vibration, themeMode
         ).enqueue(new Callback<BaseResponse>() {
             @Override
@@ -751,8 +783,10 @@ public class SettingsFragment extends Fragment {
         progressDialog.setCancelable(false);
         progressDialog.show();
 
-        BrainScanApi api = RetrofitClient.getRetrofitInstance().create(BrainScanApi.class);
+        BrainScanApi api = RetrofitClient.getRetrofitInstance(requireContext()).create(BrainScanApi.class);
         
+        String mobile = prefs.getString("mobile", "");
+        String gender = prefs.getString("gender", "");
         int darkMode = prefs.getBoolean(KEY_DARK_MODE, false) ? 1 : 0;
         String language = prefs.getString(KEY_LANGUAGE, "English");
         int dailySummary = prefs.getBoolean(KEY_DAILY_SUMMARY, true) ? 1 : 0;
@@ -760,8 +794,8 @@ public class SettingsFragment extends Fragment {
         int vibration = prefs.getBoolean(KEY_VIBRATION, true) ? 1 : 0;
         int themeMode = prefs.getInt("theme_mode", 0);
 
-        api.updateProfileFields(
-                email, name, specialty, bio, hospital, license, yearsExp,
+        api.updateProfileFull(
+                email, name, mobile, gender, specialty, bio, hospital, license, yearsExp,
                 darkMode, language, dailySummary, sound, vibration, themeMode
         ).enqueue(new Callback<BaseResponse>() {
             @Override
@@ -793,7 +827,7 @@ public class SettingsFragment extends Fragment {
         if (System.currentTimeMillis() - lastSync < 30_000L) return;
         prefs.edit().putLong("last_server_sync_ms", System.currentTimeMillis()).apply();
 
-        BrainScanApi api = RetrofitClient.getRetrofitInstance().create(BrainScanApi.class);
+        BrainScanApi api = RetrofitClient.getRetrofitInstance(requireContext()).create(BrainScanApi.class);
         api.checkUser(email).enqueue(new Callback<LoginResponse>() {
             @Override
             public void onResponse(Call<LoginResponse> call, Response<LoginResponse> response) {

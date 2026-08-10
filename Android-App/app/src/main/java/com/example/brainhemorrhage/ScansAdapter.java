@@ -35,6 +35,17 @@ public class ScansAdapter extends RecyclerView.Adapter<ScansAdapter.ViewHolder> 
         notifyDataSetChanged();
     }
 
+    public List<ScanItem> getData() {
+        return scans;
+    }
+
+    public void removeItem(int position) {
+        if (position >= 0 && position < scans.size()) {
+            scans.remove(position);
+            notifyItemRemoved(position);
+        }
+    }
+
     @NonNull
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
@@ -63,7 +74,7 @@ public class ScansAdapter extends RecyclerView.Adapter<ScansAdapter.ViewHolder> 
             String imageUrl = scan.getImagePath();
             // Prepend BASE_URL if it's a relative server path
             if (!imageUrl.startsWith("http") && !imageUrl.startsWith("file") && !imageUrl.startsWith("content")) {
-                imageUrl = RetrofitClient.BASE_URL + imageUrl;
+                imageUrl = RetrofitClient.getBaseUrl() + imageUrl;
             }
             
             Glide.with(holder.itemView.getContext())

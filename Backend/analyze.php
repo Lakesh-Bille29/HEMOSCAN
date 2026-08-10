@@ -51,6 +51,28 @@ if (!move_uploaded_file($_FILES['image']['tmp_name'], $tmpFile)) {
     exit;
 }
 
+// Downscale image to max 1024px to accelerate Python TFLite inference
+if (function_exists('imagecreatefromjpeg')) {
+    list($width, $height, $type) = @getimagesize($tmpFile);
+    if ($width > 1024 || $height > 1024) {
+        $src = null;
+        if ($type === IMAGETYPE_JPEG) $src = @imagecreatefromjpeg($tmpFile);
+        elseif ($type === IMAGETYPE_PNG) $src = @imagecreatefrompng($tmpFile);
+        elseif ($type === IMAGETYPE_WEBP) $src = @imagecreatefromwebp($tmpFile);
+
+        if ($src) {
+            $ratio  = min(1024 / $width, 1024 / $height);
+            $newW   = (int)round($width * $ratio);
+            $newH   = (int)round($height * $ratio);
+            $dst    = imagecreatetruecolor($newW, $newH);
+            imagecopyresampled($dst, $src, 0, 0, 0, 0, $newW, $newH, $width, $height);
+            imagejpeg($dst, $tmpFile, 85);
+            imagedestroy($src);
+            imagedestroy($dst);
+        }
+    }
+}
+
 // ── Build the Python command ─────────────────────────────────────────────────
 $scriptPath = __DIR__ . DIRECTORY_SEPARATOR . 'inference.py';
 $scriptPath = escapeshellarg($scriptPath);

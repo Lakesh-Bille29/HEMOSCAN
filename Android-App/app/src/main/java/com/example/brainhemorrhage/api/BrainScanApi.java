@@ -47,6 +47,18 @@ public interface BrainScanApi {
             @Query("patient_gender") String patientGender
     );
 
+    @GET("get_dashboard.php")
+    Call<DashboardResponse> getDashboard(
+            @Query("doctor_email") String doctorEmail
+    );
+
+    /** Delta sync: only returns scans created after the given Unix timestamp. */
+    @GET("get_scans.php")
+    Call<ScanResponse> getPatientScansDelta(
+            @Query("doctor_email") String doctorEmail,
+            @Query("since") long sinceTimestamp
+    );
+
     @Multipart
     @POST("upload_scan.php")
     Call<BaseResponse> uploadScan(
@@ -149,6 +161,62 @@ public interface BrainScanApi {
     @GET("get_tickets.php")
     Call<BaseResponse> getTickets(
             @Query("email") String email
+    );
+
+    /**
+     * Full profile update including mobile + gender so changes sync across platforms.
+     */
+    @FormUrlEncoded
+    @POST("update_profile.php")
+    Call<BaseResponse> updateProfileFull(
+            @Field("email")         String email,
+            @Field("name")          String name,
+            @Field("mobile")        String mobile,
+            @Field("gender")        String gender,
+            @Field("specialty")     String specialty,
+            @Field("bio")           String bio,
+            @Field("hospital")      String hospital,
+            @Field("license")       String license,
+            @Field("years_exp")     Integer yearsExp,
+            @Field("dark_mode")     Integer darkMode,
+            @Field("language")      String language,
+            @Field("daily_summary") Integer dailySummary,
+            @Field("sound")         Integer sound,
+            @Field("vibration")     Integer vibration,
+            @Field("theme_mode")    Integer themeMode
+    );
+
+    /**
+     * Delete a scan record from DB + removes its image file from disk.
+     * Both web and Android call this to keep scan history in sync.
+     */
+    @FormUrlEncoded
+    @POST("delete_scan.php")
+    Call<BaseResponse> deleteScan(
+            @Field("scan_id")      String scanId,
+            @Field("doctor_email") String doctorEmail
+    );
+
+    /**
+     * Fetch notifications for the logged-in doctor.
+     * Supports ?unread_only=1 to filter only unread items.
+     */
+    @GET("get_notifications.php")
+    Call<BaseResponse> getNotifications(
+            @Query("email")       String email,
+            @Query("unread_only") int unreadOnly
+    );
+
+    /**
+     * Mark one notification (by id) or all notifications as read.
+     * Pass id=0 and all=1 to mark everything, or pass a specific id.
+     */
+    @FormUrlEncoded
+    @POST("mark_notification_read.php")
+    Call<BaseResponse> markNotificationRead(
+            @Field("email") String email,
+            @Field("id")    int id,
+            @Field("all")   int markAll
     );
 
     /**

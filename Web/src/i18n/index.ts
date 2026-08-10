@@ -20,6 +20,17 @@ export const SUPPORTED_LANGUAGES = [
   { code: 'fr', label: 'French',     nativeLabel: 'Français' },
 ];
 
+export function getLanguageCode(displayName?: string): string {
+  if (!displayName) return 'en';
+  const name = displayName.toLowerCase();
+  if (name.includes('hindi') || name.includes('हिन्दी')) return 'hi';
+  if (name.includes('telugu') || name.includes('తెలుగు')) return 'te';
+  if (name.includes('bengali') || name.includes('বাংলা')) return 'bn';
+  if (name.includes('spanish') || name.includes('español')) return 'es';
+  if (name.includes('french') || name.includes('français')) return 'fr';
+  return 'en';
+}
+
 i18n
   .use(LanguageDetector)
   .use(initReactI18next)

@@ -35,6 +35,7 @@ export interface ScanItemDto {
   image_path: string;
   date_added: string;
   time_added: string;
+  created_at?: string;
 }
 
 export interface ScanResponse extends BaseResponse {
@@ -48,6 +49,22 @@ export interface ScanResponse extends BaseResponse {
 export interface TicketResponse extends BaseResponse {
   ticket_number?: string;
   email_sent?: boolean;
+}
+
+export interface NotificationItem {
+  id: number;
+  title: string;
+  body: string;
+  type: string;
+  reference_id: string | null;
+  is_read: number;
+  created_at: string;
+}
+
+export interface NotificationsResponse extends BaseResponse {
+  unread_count: number;
+  count: number;
+  data: NotificationItem[];
 }
 
 // Get dynamic API base URL from storage
@@ -409,6 +426,53 @@ export const apiService = {
     formData.append('platform', 'web');
 
     const response = await fetch(`${getApiBaseUrl()}save_fcm_token.php`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: formData.toString(),
+    });
+    return parseLenientJson(response);
+  },
+
+  // 15. Delete a scan (cross-platform — removes from DB + disk)
+  deleteScan: async (scanId: string, doctorEmail: string): Promise<BaseResponse> => {
+    const formData = new URLSearchParams();
+    formData.append('scan_id', scanId);
+    formData.append('doctor_email', doctorEmail);
+
+    const response = await fetch(`${getApiBaseUrl()}delete_scan.php`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: formData.toString(),
+    });
+    // Bust the scan cache so list refreshes immediately
+    Object.keys(scanCache).forEach(key => delete scanCache[key]);
+    return parseLenientJson(response);
+  },
+
+  // 16. Get notifications for a doctor
+  getNotifications: async (
+    email: string,
+    unreadOnly: boolean = false
+  ): Promise<NotificationsResponse> => {
+    const url = `${getApiBaseUrl()}get_notifications.php?email=${encodeURIComponent(email)}${unreadOnly ? '&unread_only=1' : ''}`;
+    const response = await fetch(url);
+    return parseLenientJson(response);
+  },
+
+  // 17. Mark notification(s) as read
+  markNotificationRead: async (
+    email: string,
+    id: number | 'all'
+  ): Promise<BaseResponse> => {
+    const formData = new URLSearchParams();
+    formData.append('email', email);
+    if (id === 'all') {
+      formData.append('all', '1');
+    } else {
+      formData.append('id', String(id));
+    }
+
+    const response = await fetch(`${getApiBaseUrl()}mark_notification_read.php`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: formData.toString(),

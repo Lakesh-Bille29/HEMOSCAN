@@ -184,7 +184,7 @@ public class ResultFragment extends Fragment {
                 
                 // Prepend BASE_URL if it's a relative path
                 if (!imageUriString.startsWith("http") && !imageUriString.startsWith("file") && !imageUriString.startsWith("content")) {
-                    imageUriString = RetrofitClient.BASE_URL + imageUriString;
+                    imageUriString = RetrofitClient.getBaseUrl() + imageUriString;
                 }
 
                 Glide.with(this)

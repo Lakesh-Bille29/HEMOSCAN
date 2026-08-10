@@ -82,7 +82,7 @@ public class ScanTimelineAdapter extends RecyclerView.Adapter<ScanTimelineAdapte
             String imagePath = scan.getImageUri();
             // If it's a relative path from the server (e.g. "uploads/...")
             if (!imagePath.startsWith("http") && !imagePath.startsWith("file://") && !imagePath.startsWith("content://")) {
-                imagePath = RetrofitClient.BASE_URL + imagePath;
+                imagePath = RetrofitClient.getBaseUrl() + imagePath;
             }
 
             Glide.with(holder.itemView.getContext())

@@ -12,12 +12,12 @@ importScripts('https://www.gstatic.com/firebasejs/10.14.0/firebase-messaging-com
 
 // ── Firebase config (replace with your project values) ───────────────────────
 firebase.initializeApp({
-  apiKey:            "YOUR_API_KEY",
-  authDomain:        "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId:         "YOUR_PROJECT_ID",
-  storageBucket:     "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId:             "YOUR_APP_ID"
+  apiKey:            "AIzaSyBzSKoSfx-G_KJXWMHF4QaGmVwSUazx53k",
+  authDomain:        "hemoscan-63fa0.firebaseapp.com",
+  projectId:         "hemoscan-63fa0",
+  storageBucket:     "hemoscan-63fa0.firebasestorage.app",
+  messagingSenderId: "763022396747",
+  appId:             "1:763022396747:web:e18d651bced8d38257ecce"
 });
 
 const messaging = firebase.messaging();

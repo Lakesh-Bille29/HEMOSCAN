@@ -24,7 +24,7 @@ import java.util.List;
 public class DetectorHelper {
     private static final String TAG = "DetectorHelper";
     private static final String MODEL_FILE = "hemorrhage_detector.tflite";
-    private static final float CONFIDENCE_THRESHOLD = 0.60f;
+    private static final float CONFIDENCE_THRESHOLD = 0.35f;
     private static final float IOU_THRESHOLD = 0.25f;
 
     private Interpreter interpreter;

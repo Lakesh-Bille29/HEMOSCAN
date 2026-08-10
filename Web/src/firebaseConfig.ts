@@ -8,12 +8,12 @@
 // ────────────────────────────────────────────────────────────────────────────────
 
 export const firebaseConfig = {
-  apiKey:            import.meta.env.VITE_FIREBASE_API_KEY            || "YOUR_API_KEY",
-  authDomain:        import.meta.env.VITE_FIREBASE_AUTH_DOMAIN        || "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId:         import.meta.env.VITE_FIREBASE_PROJECT_ID         || "YOUR_PROJECT_ID",
-  storageBucket:     import.meta.env.VITE_FIREBASE_STORAGE_BUCKET     || "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "YOUR_MESSAGING_SENDER_ID",
-  appId:             import.meta.env.VITE_FIREBASE_APP_ID             || "YOUR_APP_ID",
+  apiKey:            import.meta.env.VITE_FIREBASE_API_KEY            || "AIzaSyBzSKoSfx-G_KJXWMHF4QaGmVwSUazx53k",
+  authDomain:        import.meta.env.VITE_FIREBASE_AUTH_DOMAIN        || "hemoscan-63fa0.firebaseapp.com",
+  projectId:         import.meta.env.VITE_FIREBASE_PROJECT_ID         || "hemoscan-63fa0",
+  storageBucket:     import.meta.env.VITE_FIREBASE_STORAGE_BUCKET     || "hemoscan-63fa0.firebasestorage.app",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "763022396747",
+  appId:             import.meta.env.VITE_FIREBASE_APP_ID             || "1:763022396747:web:e18d651bced8d38257ecce",
   // VAPID key from Firebase Console → Project Settings → Cloud Messaging → Web Push certificates
   vapidKey:          import.meta.env.VITE_FIREBASE_VAPID_KEY          || "YOUR_VAPID_KEY",
 };

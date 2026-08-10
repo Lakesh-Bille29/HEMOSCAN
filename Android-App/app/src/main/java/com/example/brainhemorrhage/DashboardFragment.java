@@ -1,6 +1,8 @@
 package com.example.brainhemorrhage;
 
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -20,6 +22,7 @@ import com.bumptech.glide.Glide;
 import com.example.brainhemorrhage.api.BrainScanApi;
 import com.example.brainhemorrhage.api.RetrofitClient;
 import com.example.brainhemorrhage.api.ScanResponse;
+import com.example.brainhemorrhage.api.DashboardResponse;
 import com.example.brainhemorrhage.api.LoginResponse;
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -29,6 +32,9 @@ import java.util.List;
 
 public class DashboardFragment extends Fragment {
 
+    private static final long POLL_INTERVAL_MS = 30_000; // 30 seconds
+    private static final String TAG = "DashboardFragment";
+
     private TextView doctorNameText, totalCountText, normalCountText, abnormalCountText;
     private ImageView toolbarProfileImage;
     private RecyclerView recentScansRecyclerView;
@@ -36,6 +42,13 @@ public class DashboardFragment extends Fragment {
     private SharedPreferences prefs;
 
     private ScansAdapter scansAdapter;
+
+    // Delta-sync baseline: stores server_time returned by the last successful full fetch
+    private long lastSyncServerTime = 0L;
+
+    // Handler for 30-second background polling
+    private final Handler pollHandler = new Handler(Looper.getMainLooper());
+    private Runnable pollRunnable;
 
     @Nullable
     @Override
@@ -112,7 +125,7 @@ public class DashboardFragment extends Fragment {
         if (photoUri != null && !photoUri.isEmpty() && toolbarProfileImage != null) {
             String imageUrl = photoUri;
             if (!imageUrl.startsWith("http") && !imageUrl.startsWith("file") && !imageUrl.startsWith("content")) {
-                imageUrl = RetrofitClient.BASE_URL + imageUrl;
+                imageUrl = RetrofitClient.getBaseUrl() + imageUrl;
             }
             toolbarProfileImage.setImageTintList(null); // Clear the white XML tint
             toolbarProfileImage.setPadding(0, 0, 0, 0); // Clear padding so photo fills the circle
@@ -148,32 +161,30 @@ public class DashboardFragment extends Fragment {
 
     private void fetchRecentScans() {
         String doctorEmail = prefs.getString("email", "");
-        BrainScanApi api = RetrofitClient.getRetrofitInstance().create(BrainScanApi.class);
-        api.getPatientScans(doctorEmail, null, null, null, null).enqueue(new Callback<ScanResponse>() {
+        BrainScanApi api = RetrofitClient.getRetrofitInstance(requireContext()).create(BrainScanApi.class);
+        api.getDashboard(doctorEmail).enqueue(new Callback<DashboardResponse>() {
             @Override
-            public void onResponse(Call<ScanResponse> call, Response<ScanResponse> response) {
+            public void onResponse(Call<DashboardResponse> call, Response<DashboardResponse> response) {
                 if (response.isSuccessful() && response.body() != null && "success".equals(response.body().getStatus())) {
-                    List<ScanResponse.ScanItemDto> dtos = response.body().getData();
-                    int total = dtos.size();
-                    int normal = 0;
-                    int abnormal = 0;
-                    
+                    DashboardResponse dash = response.body();
+                    int total = dash.getTotalScans();
+                    int normal = dash.getNormalScans();
+                    int abnormal = dash.getAbnormalScans();
+
+                    if (totalCountText != null) totalCountText.setText(String.valueOf(total));
+                    if (normalCountText != null) normalCountText.setText(String.valueOf(normal));
+                    if (abnormalCountText != null) abnormalCountText.setText(String.valueOf(abnormal));
+
+                    List<ScanResponse.ScanItemDto> dtos = dash.getData();
                     List<ScanItem> scans = new ArrayList<>();
-                    for (int i = 0; i < dtos.size(); i++) {
-                        ScanResponse.ScanItemDto dto = dtos.get(i);
-                        String result = dto.getResult();
-                        if (result != null && result.toLowerCase().contains("abnormal")) {
-                            abnormal++;
-                        } else {
-                            normal++;
-                        }
-                        
-                        if (i < 5) {
+                    if (dtos != null) {
+                        for (int i = 0; i < dtos.size(); i++) {
+                            ScanResponse.ScanItemDto dto = dtos.get(i);
                             ScanItem item = new ScanItem(
                                 Integer.parseInt(dto.getId()),
                                 dto.getDoctor_email(),
                                 dto.getPatient_name(),
-                                result,
+                                dto.getResult(),
                                 dto.getDate_added(),
                                 dto.getImage_path()
                             );
@@ -183,25 +194,31 @@ public class DashboardFragment extends Fragment {
                             scans.add(item);
                         }
                     }
-                    
-                    if (totalCountText != null) totalCountText.setText(String.valueOf(total));
-                    if (normalCountText != null) normalCountText.setText(String.valueOf(normal));
-                    if (abnormalCountText != null) abnormalCountText.setText(String.valueOf(abnormal));
 
                     if (scansAdapter != null) {
                         scansAdapter.updateData(scans);
                     }
+
+                    if (dash.getServerTime() > 0) {
+                        lastSyncServerTime = dash.getServerTime();
+                    }
+
+                    startPolling();
+                } else {
+                    if (totalCountText != null) totalCountText.setText("0");
+                    if (normalCountText != null) normalCountText.setText("0");
+                    if (abnormalCountText != null) abnormalCountText.setText("0");
                 }
             }
 
             @Override
-            public void onFailure(Call<ScanResponse> call, Throwable t) {
+            public void onFailure(Call<DashboardResponse> call, Throwable t) {
                 try {
                     List<ScanItem> scans = DatabaseHelper.getInstance(requireContext()).getAllLocalPatients();
                     int total = scans.size();
                     int normal = 0;
                     int abnormal = 0;
-                    
+
                     List<ScanItem> recentScans = new ArrayList<>();
                     for (int i = 0; i < scans.size(); i++) {
                         ScanItem item = scans.get(i);
@@ -215,7 +232,7 @@ public class DashboardFragment extends Fragment {
                             recentScans.add(item);
                         }
                     }
-                    
+
                     if (totalCountText != null) totalCountText.setText(String.valueOf(total));
                     if (normalCountText != null) normalCountText.setText(String.valueOf(normal));
                     if (abnormalCountText != null) abnormalCountText.setText(String.valueOf(abnormal));
@@ -226,6 +243,96 @@ public class DashboardFragment extends Fragment {
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
+            }
+        });
+    }
+
+    // ── 30-second delta sync polling ───────────────────────────────────────
+
+    private void startPolling() {
+        stopPolling(); // clear any existing runnable
+        pollRunnable = new Runnable() {
+            @Override
+            public void run() {
+                if (!isAdded() || getContext() == null) return;
+                doDeltaSync();
+                pollHandler.postDelayed(this, POLL_INTERVAL_MS);
+            }
+        };
+        pollHandler.postDelayed(pollRunnable, POLL_INTERVAL_MS);
+    }
+
+    private void stopPolling() {
+        if (pollRunnable != null) {
+            pollHandler.removeCallbacks(pollRunnable);
+            pollRunnable = null;
+        }
+    }
+
+    /**
+     * Fetches only scans created after lastSyncServerTime.
+     * Merges new items into the existing adapter list without clearing it.
+     */
+    private void doDeltaSync() {
+        String doctorEmail = prefs.getString("email", "");
+        if (doctorEmail.isEmpty() || lastSyncServerTime == 0L) return;
+
+        BrainScanApi api = RetrofitClient.getRetrofitInstance(requireContext()).create(BrainScanApi.class);
+        api.getPatientScansDelta(doctorEmail, lastSyncServerTime).enqueue(new Callback<ScanResponse>() {
+            @Override
+            public void onResponse(Call<ScanResponse> call, Response<ScanResponse> response) {
+                if (!isAdded() || getContext() == null) return;
+                if (response.isSuccessful() && response.body() != null
+                        && "success".equals(response.body().getStatus())) {
+                    List<ScanResponse.ScanItemDto> dtos = response.body().getData();
+                    if (dtos == null || dtos.isEmpty()) return;
+
+                    // Build ScanItem list from delta (newest first, from server)
+                    List<ScanItem> newItems = new ArrayList<>();
+                    for (ScanResponse.ScanItemDto dto : dtos) {
+                        ScanItem item = new ScanItem(
+                            Integer.parseInt(dto.getId()),
+                            dto.getDoctor_email(),
+                            dto.getPatient_name(),
+                            dto.getResult(),
+                            dto.getDate_added(),
+                            dto.getImage_path()
+                        );
+                        item.setAge(dto.getPatient_age());
+                        item.setGender(dto.getPatient_gender());
+                        item.setDbPatientId(dto.getPatient_id());
+                        newItems.add(item);
+                    }
+
+                    // Prepend new items to existing adapter data
+                    if (scansAdapter != null && !newItems.isEmpty()) {
+                        List<ScanItem> current = scansAdapter.getData();
+                        newItems.addAll(current);
+                        // Keep only first 5 in the recent list
+                        scansAdapter.updateData(newItems.size() > 5 ? newItems.subList(0, 5) : newItems);
+
+                        // Update stat counters
+                        int total = newItems.size();
+                        int normal = 0, abnormal = 0;
+                        for (ScanItem s : newItems) {
+                            if (s.getResult() != null && s.getResult().toLowerCase().contains("abnormal")) abnormal++;
+                            else normal++;
+                        }
+                        if (totalCountText != null) totalCountText.setText(String.valueOf(total));
+                        if (normalCountText != null) normalCountText.setText(String.valueOf(normal));
+                        if (abnormalCountText != null) abnormalCountText.setText(String.valueOf(abnormal));
+                    }
+
+                    // Advance the baseline
+                    if (response.body().getServerTime() > 0) {
+                        lastSyncServerTime = response.body().getServerTime();
+                    }
+                }
+            }
+
+            @Override
+            public void onFailure(Call<ScanResponse> call, Throwable t) {
+                // Silent fail — retry on next interval
             }
         });
     }
@@ -365,5 +472,12 @@ public class DashboardFragment extends Fragment {
             bottomNavigation.setSelectedItemId(R.id.nav_dashboard);
         }
         refreshProfileFromServer();
+        fetchRecentScans();
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        stopPolling(); // stop polling to avoid memory leaks when fragment is removed
     }
 }

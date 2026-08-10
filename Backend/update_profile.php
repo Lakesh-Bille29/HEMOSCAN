@@ -21,7 +21,7 @@ if (empty($email)) {
 }
 
 // Check if doctor exists and select all fields to allow partial updates
-$stmt = $conn->prepare("SELECT id, name, specialty, profile_image, bio, hospital, license, years_exp, dark_mode, language, daily_summary, sound, vibration, theme_mode FROM doctors WHERE email = ?");
+$stmt = $conn->prepare("SELECT id, name, specialty, profile_image, bio, hospital, license, years_exp, dark_mode, language, daily_summary, sound, vibration, theme_mode, mobile, gender FROM doctors WHERE email = ?");
 $stmt->bind_param("s", $email);
 $stmt->execute();
 $stmt->store_result();
@@ -35,7 +35,7 @@ if ($stmt->num_rows === 0) {
     exit;
 }
 
-$stmt->bind_result($doctor_id, $curr_name, $curr_specialty, $current_profile_image, $curr_bio, $curr_hospital, $curr_license, $curr_years_exp, $curr_dark_mode, $curr_language, $curr_daily_summary, $curr_sound, $curr_vibration, $curr_theme_mode);
+$stmt->bind_result($doctor_id, $curr_name, $curr_specialty, $current_profile_image, $curr_bio, $curr_hospital, $curr_license, $curr_years_exp, $curr_dark_mode, $curr_language, $curr_daily_summary, $curr_sound, $curr_vibration, $curr_theme_mode, $curr_mobile, $curr_gender);
 $stmt->fetch();
 $stmt->close();
 
@@ -52,6 +52,8 @@ $daily_summary = isset($_POST['daily_summary']) ? intval($_POST['daily_summary']
 $sound = isset($_POST['sound']) ? intval($_POST['sound']) : $curr_sound;
 $vibration = isset($_POST['vibration']) ? intval($_POST['vibration']) : $curr_vibration;
 $theme_mode = isset($_POST['theme_mode']) ? intval($_POST['theme_mode']) : $curr_theme_mode;
+$mobile = isset($_POST['mobile']) ? trim($_POST['mobile']) : $curr_mobile;
+$gender = isset($_POST['gender']) ? trim($_POST['gender']) : $curr_gender;
 
 $profile_image_path = $current_profile_image;
 
@@ -99,8 +101,8 @@ if (!empty($file_key) && $_FILES[$file_key]['error'] === UPLOAD_ERR_OK) {
 }
 
 // Update all fields in database
-$stmt_update = $conn->prepare("UPDATE doctors SET name = ?, specialty = ?, profile_image = ?, bio = ?, hospital = ?, license = ?, years_exp = ?, dark_mode = ?, language = ?, daily_summary = ?, sound = ?, vibration = ?, theme_mode = ? WHERE email = ?");
-$stmt_update->bind_param("ssssssiisiiiis", $name, $specialty, $profile_image_path, $bio, $hospital, $license, $years_exp, $dark_mode, $language, $daily_summary, $sound, $vibration, $theme_mode, $email);
+$stmt_update = $conn->prepare("UPDATE doctors SET name = ?, specialty = ?, profile_image = ?, bio = ?, hospital = ?, license = ?, years_exp = ?, dark_mode = ?, language = ?, daily_summary = ?, sound = ?, vibration = ?, theme_mode = ?, mobile = ?, gender = ? WHERE email = ?");
+$stmt_update->bind_param("ssssssiisiiiisss", $name, $specialty, $profile_image_path, $bio, $hospital, $license, $years_exp, $dark_mode, $language, $daily_summary, $sound, $vibration, $theme_mode, $mobile, $gender, $email);
 
 if ($stmt_update->execute()) {
     echo json_encode([
@@ -120,7 +122,9 @@ if ($stmt_update->execute()) {
             "daily_summary" => $daily_summary,
             "sound" => $sound,
             "vibration" => $vibration,
-            "theme_mode" => $theme_mode
+            "theme_mode" => $theme_mode,
+            "mobile" => $mobile,
+            "gender" => $gender
         ]
     ]);
 } else {

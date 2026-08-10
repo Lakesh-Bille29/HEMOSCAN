@@ -3,6 +3,14 @@
 require_once 'db.php';
 require_once 'config.php';
 
+require_once __DIR__ . '/phpmailer/Exception.php';
+require_once __DIR__ . '/phpmailer/PHPMailer.php';
+require_once __DIR__ . '/phpmailer/SMTP.php';
+
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\SMTP;
+use PHPMailer\PHPMailer\Exception;
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     echo json_encode(["status" => "error", "message" => "POST required"]);
     exit;
@@ -73,18 +81,24 @@ $stmt->close();
 // ── Send acknowledgment email via PHPMailer ────────────────────────────────────────
 $emailSent = false;
 try {
-    require_once 'phpmailer/src/PHPMailer.php';
-    require_once 'phpmailer/src/SMTP.php';
-    require_once 'phpmailer/src/Exception.php';
-
-    $mail = new PHPMailer\PHPMailer\PHPMailer(true);
+    // ── 1. Send acknowledgment to user ──────────────────────────────────────────
+    $mail = new PHPMailer(true);
     $mail->isSMTP();
     $mail->Host       = SMTP_HOST;
     $mail->SMTPAuth   = true;
     $mail->Username   = SMTP_USERNAME;
     $mail->Password   = SMTP_PASSWORD;
-    $mail->SMTPSecure = PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
+    $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
     $mail->Port       = SMTP_PORT;
+    // Bypass local certificate verification (dev/XAMPP environment)
+    $mail->SMTPOptions = [
+        'ssl' => [
+            'verify_peer'       => false,
+            'verify_peer_name'  => false,
+            'allow_self_signed' => true,
+        ]
+    ];
+    $mail->SMTPDebug = 0;
 
     $mail->setFrom(SMTP_FROM, SMTP_FROM_NAME);
     $mail->addAddress($email);
@@ -99,7 +113,7 @@ try {
         <p style='color: rgba(255,255,255,0.85); margin: 8px 0 0;'>We received your support request</p>
       </div>
       <div style='background: white; padding: 24px; border-radius: 8px; margin-bottom: 16px;'>
-        <h2 style='margin: 0 0 16px; color: #1e293b;'>Ticket Confirmed</h2>
+        <h2 style='margin: 0 0 16px; color: #1e293b;'>Ticket Confirmed ✅</h2>
         <table style='width: 100%; border-collapse: collapse;'>
           <tr><td style='padding: 8px 0; color: #64748b; width: 140px;'>Ticket Number</td><td style='padding: 8px 0; font-weight: 600; color: #0ea5e9;'>#{$ticketNum}</td></tr>
           <tr><td style='padding: 8px 0; color: #64748b;'>Category</td><td style='padding: 8px 0; color: #1e293b;'>{$category}</td></tr>
@@ -111,14 +125,55 @@ try {
         <p style='color: #475569; line-height: 1.6; margin: 0;'>" . nl2br(htmlspecialchars($message)) . "</p>
       </div>
       <p style='color: #64748b; font-size: 14px; text-align: center; margin: 0;'>
-        Our team will respond within <strong>24–48 business hours</strong>.<br>
-        Please keep your ticket number for reference.
+        Our team will respond to <strong>{$email}</strong> within <strong>24–48 business hours</strong>.<br>
+        Keep your ticket number <strong>#{$ticketNum}</strong> for reference.
       </p>
     </div>";
-    $mail->AltBody = "HemoScan Support - Ticket #{$ticketNum} received.\nCategory: {$category}\nWe will respond within 24-48 business hours.";
+    $mail->AltBody = "HemoScan Support - Ticket #{$ticketNum} received.\nCategory: {$category}\nMessage: {$message}\n\nWe will respond within 24-48 business hours.";
 
     $mail->send();
     $emailSent = true;
+
+    // ── 2. Notify support team about the new ticket ──────────────────────────────
+    $supportMail = new PHPMailer(true);
+    $supportMail->isSMTP();
+    $supportMail->Host       = SMTP_HOST;
+    $supportMail->SMTPAuth   = true;
+    $supportMail->Username   = SMTP_USERNAME;
+    $supportMail->Password   = SMTP_PASSWORD;
+    $supportMail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+    $supportMail->Port       = SMTP_PORT;
+    $supportMail->SMTPOptions = [
+        'ssl' => [
+            'verify_peer'       => false,
+            'verify_peer_name'  => false,
+            'allow_self_signed' => true,
+        ]
+    ];
+    $supportMail->SMTPDebug = 0;
+
+    $supportMail->setFrom(SMTP_FROM, SMTP_FROM_NAME);
+    $supportMail->addAddress(SMTP_FROM);   // Support team receives at the same Gmail
+    $supportMail->addReplyTo($email, $email); // Team can reply directly to user
+
+    $supportMail->Subject = "[HemoScan] New Support Ticket #{$ticketNum} — {$category}";
+    $supportMail->isHTML(true);
+    $supportMail->Body = "
+    <div style='font-family: Inter, sans-serif; max-width: 600px; margin: 0 auto; background: #fff; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px;'>
+      <h2 style='color: #1e293b; margin: 0 0 16px;'>📬 New Support Ticket</h2>
+      <table style='width: 100%; border-collapse: collapse; font-size: 14px;'>
+        <tr style='background: #f8fafc;'><td style='padding: 10px; border: 1px solid #e2e8f0; font-weight: 600;'>Ticket Number</td><td style='padding: 10px; border: 1px solid #e2e8f0; color: #0ea5e9; font-weight: 700;'>#{$ticketNum}</td></tr>
+        <tr><td style='padding: 10px; border: 1px solid #e2e8f0; font-weight: 600;'>From</td><td style='padding: 10px; border: 1px solid #e2e8f0;'>{$email}</td></tr>
+        <tr style='background: #f8fafc;'><td style='padding: 10px; border: 1px solid #e2e8f0; font-weight: 600;'>Category</td><td style='padding: 10px; border: 1px solid #e2e8f0;'>{$category}</td></tr>
+        <tr><td style='padding: 10px; border: 1px solid #e2e8f0; font-weight: 600;'>Platform</td><td style='padding: 10px; border: 1px solid #e2e8f0;'>{$platform}</td></tr>
+        <tr style='background: #f8fafc;'><td style='padding: 10px; border: 1px solid #e2e8f0; font-weight: 600; vertical-align: top;'>Message</td><td style='padding: 10px; border: 1px solid #e2e8f0; line-height: 1.6;'>" . nl2br(htmlspecialchars($message)) . "</td></tr>
+      </table>
+      <p style='margin: 16px 0 0; font-size: 13px; color: #64748b;'>Reply directly to this email to respond to the user at <strong>{$email}</strong>.</p>
+    </div>";
+    $supportMail->AltBody = "New Support Ticket #{$ticketNum}\nFrom: {$email}\nCategory: {$category}\n\nMessage:\n{$message}";
+
+    $supportMail->send();
+
 } catch (Exception $e) {
     // Email failure is non-fatal — ticket is already stored in DB
     error_log("HemoScan ticket email failed for {$ticketNum}: " . $e->getMessage());
