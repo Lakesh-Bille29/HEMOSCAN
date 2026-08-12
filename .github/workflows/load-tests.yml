@@ -16,6 +16,12 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Setup PHP Environment
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, pdo, pdo_mysql, mysqli, gd, curl
+
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
@@ -32,9 +38,8 @@ jobs:
 
       - name: Start Local Backend Server for Load Test
         run: |
-          cd Backend
-          php -S 127.0.0.1:8000 &
-          sleep 2
+          php -S 127.0.0.1:8000 -t Backend &
+          sleep 3
 
       - name: Install PyTest Load Test Dependencies
         run: |
