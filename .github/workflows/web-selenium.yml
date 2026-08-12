@@ -46,7 +46,7 @@ jobs:
       - name: Install Selenium Framework Dependencies
         run: |
           cd automation/selenium
-          npm ci
+          npm install
 
       - name: Install Google Chrome Browser
         run: |

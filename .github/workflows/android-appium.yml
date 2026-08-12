@@ -53,7 +53,7 @@ jobs:
       - name: Install Framework Dependencies
         run: |
           cd automation/appium
-          npm ci
+          npm install
 
       - name: Start Appium Server in Background
         run: |
