@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  # ── 1. Database Service (MariaDB / MySQL) ────────────────────────────────────
+  db:
+    image: mariadb:10.11
+    container_name: hemoscan-db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: hemoscan_root_pass
+      MYSQL_DATABASE: brain_scan_db
+      MYSQL_USER: hemoscan_user
+      MYSQL_PASSWORD: hemoscan_pass
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./backend/setup_db.sql:/docker-entrypoint-initdb.d/01_setup.sql:ro
+      - ./backend/brain_scan_db.sql:/docker-entrypoint-initdb.d/02_brain_scan_db.sql:ro
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── 2. Backend API Service (PHP 8.2 + Apache + Python 3 AI Engine) ──────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: hemoscan-backend
+    restart: always
+    environment:
+      DB_HOST: db
+      DB_USER: root
+      DB_PASSWORD: hemoscan_root_pass
+      DB_NAME: brain_scan_db
+    ports:
+      - "8000:80"
+    volumes:
+      - ./backend/uploads:/var/www/html/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # ── 3. Web Application Service (React / Vite + Nginx) ────────────────────────
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    container_name: hemoscan-web
+    restart: always
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+volumes:
+  db_data:
+    driver: local

@@ -24,7 +24,7 @@ jobs:
 
       - name: Start PHP Server for Load Test
         run: |
-          php -S 127.0.0.1:8000 -t Backend &
+          php -S 127.0.0.1:8000 -t backend &
           sleep 4
 
       - name: Install k6 Engine

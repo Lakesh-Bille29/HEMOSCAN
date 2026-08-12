@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App -->
+    <string name="app_name">हेमोस्कैन</string>
+    <string name="title_app">हेमोस्कैन</string>
+    <string name="label_app_name_full">हेमोस्कैन AI डायग्नोस्टिक्स</string>
+
+    <!-- Auth -->
+    <string name="reset_password_header">अपना खाता सुरक्षित करें</string>
+    <string name="reset_password_subtitle">अपना पासवर्ड रीसेट करने के लिए नीचे विवरण भरें और अपने मेडिकल डैशबोर्ड तक पुनः पहुँचें।</string>
+    <string name="label_username_email">उपयोगकर्ता नाम या ईमेल</string>
+    <string name="label_new_password">नया पासवर्ड</string>
+    <string name="label_confirm_password">नया पासवर्ड पुनः दर्ज करें</string>
+    <string name="label_confirm_password_simple">पासवर्ड की पुष्टि करें</string>
+    <string name="action_update_password">पासवर्ड अपडेट करें</string>
+    <string name="action_back_to_login">लॉगिन पर वापस जाएं</string>
+    <string name="label_password">पासवर्ड</string>
+    <string name="action_login">लॉगिन</string>
+    <string name="label_remember_me">मुझे याद रखें</string>
+    <string name="action_forgot_password">पासवर्ड भूल गए?</string>
+    <string name="label_no_account">खाता नहीं है? साइन अप करें</string>
+    <string name="label_privacy_terms">गोपनीयता नीति | सेवा की शर्तें</string>
+    <string name="label_full_name">पूरा नाम</string>
+    <string name="action_signup">साइन अप</string>
+    <string name="label_already_have_account">पहले से खाता है? लॉगिन करें</string>
+    <string name="helper_username_email">अपने खाते से जुड़ा ईमेल या उपयोगकर्ता नाम दर्ज करें</string>
+    <string name="action_go_to_dashboard">डैशबोर्ड पर जाएं</string>
+    <string name="content_desc_profile">प्रोफ़ाइल</string>
+
+    <!-- Dashboard -->
+    <string name="critical_cases_pending">2 गंभीर मामले लंबित</string>
+    <string name="immediate_review">तत्काल समीक्षा आवश्यक</string>
+    <string name="label_view">देखें</string>
+    <string name="label_total_scans">कुल स्कैन</string>
+    <string name="label_normal">सामान्य</string>
+    <string name="label_abnormal">असामान्य</string>
+    <string name="label_today">आज</string>
+    <string name="label_recent_scans">हाल के स्कैन</string>
+    <string name="label_view_all">सभी देखें</string>
+    <string name="action_start_new_scan">नया स्कैन शुरू करें</string>
+    <string name="welcome_doctor">स्वागत है, डॉ. स्मिथ</string>
+    <string name="welcome_subtitle">आप उन्नत AI निदान से रोगियों की मदद करने के लिए तैयार हैं।</string>
+    <string name="greeting_doctor">सुप्रभात, डॉ. स्मिथ</string>
+    <string name="feature_ai">AI-आधारित निदान</string>
+    <string name="feature_realtime">रीयल-टाइम परिणाम</string>
+    <string name="feature_secure">सुरक्षित रोगी रिकॉर्ड</string>
+
+    <!-- Profile -->
+    <string name="label_hospital">अस्पताल / संस्था</string>
+    <string name="label_license">चिकित्सा लाइसेंस नं.</string>
+    <string name="label_years_exp">अनुभव के वर्ष</string>
+    <string name="hint_hospital">उदा. अपोलो हॉस्पिटल्स</string>
+    <string name="hint_license">उदा. MCI-2024-00234</string>
+    <string name="hint_years_exp">उदा. 8</string>
+
+    <!-- Settings -->
+    <string name="label_change_password">पासवर्ड बदलें</string>
+    <string name="label_language">भाषा</string>
+    <string name="label_dark_mode">डार्क मोड</string>
+    <string name="label_logout">लॉगआउट</string>
+    <string name="label_delete_account">खाता हटाएं</string>
+    <string name="label_edit_profile">प्रोफ़ाइल संपादित करें</string>
+    <string name="label_theme_settings">थीम सेटिंग्स</string>
+    <string name="label_notifications">सूचनाएं</string>
+    <string name="label_data_storage">डेटा और स्टोरेज</string>
+    <string name="label_share_app">ऐप शेयर करें</string>
+    <string name="label_rate_app">ऐप को रेट करें</string>
+    <string name="label_about_app">हमारे बारे में</string>
+    <string name="label_about_us">हमारे बारे में</string>
+    <string name="label_help_center">सहायता केंद्र</string>
+    <string name="label_system_default">सिस्टम डिफ़ॉल्ट</string>
+    <string name="label_light">लाइट</string>
+    <string name="label_dark">डार्क</string>
+    <string name="label_privacy_policy">गोपनीयता नीति</string>
+    <string name="label_app_info">ऐप जानकारी</string>
+    <string name="label_faqs">सामान्य प्रश्न</string>
+    <string name="label_terms_conditions">नियम एवं शर्तें</string>
+    <string name="label_contact_support">सहायता से संपर्क करें</string>
+    <string name="label_account_settings">खाता सेटिंग्स</string>
+    <string name="label_app_preferences">ऐप प्राथमिकताएं</string>
+    <string name="label_account_security">खाता सुरक्षा</string>
+    <string name="label_more_info">अधिक जानकारी</string>
+    <string name="msg_share_app">HemoScan देखें - बुद्धिमान मस्तिष्क रक्तस्राव निदान मंच!</string>
+
+    <!-- Navigation -->
+    <string name="nav_dashboard">डैशबोर्ड</string>
+    <string name="nav_scan">नया स्कैन</string>
+    <string name="nav_history">इतिहास</string>
+    <string name="nav_settings">सेटिंग्स</string>
+
+    <!-- Empty/Error States -->
+    <string name="title_empty_records">कोई रिकॉर्ड नहीं मिला</string>
+    <string name="msg_empty_records">आपके विश्लेषित स्कैन यहाँ दिखाई देंगे जब आप नया विश्लेषण शुरू करेंगे।</string>
+    <string name="title_error">कुछ गलत हुआ</string>
+    <string name="msg_error">हम रिकॉर्ड लोड नहीं कर सके। कृपया अपना कनेक्शन जाँचें और पुनः प्रयास करें।</string>
+    <string name="action_retry">पुनः प्रयास करें</string>
+    <string name="label_patient_info">रोगी की जानकारी</string>
+    <string name="label_analyzed_scan">विश्लेषित मस्तिष्क स्कैन</string>
+    <string name="action_share_report">विश्लेषण रिपोर्ट साझा करें</string>
+    <string name="label_clinical_findings">नैदानिक निष्कर्ष</string>
+
+    <!-- About -->
+    <string name="title_our_mission">हमारा मिशन</string>
+    <string name="msg_our_mission">HemoScan में, हमारा मिशन चिकित्सा पेशेवरों को उन्नत AI तकनीक से सशक्त करना है।</string>
+    <string name="title_our_team">हमारी टीम</string>
+    <string name="msg_our_team">हम डेटा वैज्ञानिकों, न्यूरो-रेडियोलॉजिस्टों और सॉफ्टवेयर इंजीनियरों की एक विविध टीम हैं।</string>
+    <string name="title_getting_started">शुरुआत कैसे करें</string>
+    <string name="msg_getting_started">1. अपनी चिकित्सा साख के साथ खाता बनाएं।\n2. डैशबोर्ड पर जाएं और \'नया स्कैन\' पर क्लिक करें।\n3. CT इमेज अपलोड करें।\n4. AI मॉडल का परिणाम प्रतीक्षा करें।\n5. नैदानिक निष्कर्षों की समीक्षा करें।</string>
+    <string name="title_troubleshooting">समस्या निवारण</string>
+    <string name="msg_troubleshooting">- अपलोड विफल: स्थिर इंटरनेट कनेक्शन सुनिश्चित करें।\n- धीमी प्रोसेसिंग: 30 सेकंड तक प्रतीक्षा करें।\n- लॉगिन समस्या: \'पासवर्ड भूल गए\' लिंक उपयोग करें।</string>
+    <string name="label_version">संस्करण: 2.1.0</string>
+    <string name="label_build">बिल्ड: 2026.06.11</string>
+    <string name="label_developer">डेवलपर: AI MedTech Solutions</string>
+    <string name="label_tech_stack">स्टैक: Android (Java), TensorFlow Lite, Retrofit</string>
+    <string name="label_model_version">AI मॉडल v4.2 (क्लिनिकल)</string>
+    <string name="label_release_notes">नवीनतम अपडेट: Material 3 UI ओवरहॉल और प्रदर्शन अनुकूलन।</string>
+    <string name="label_last_updated">अंतिम अपडेट: जून 2026</string>
+
+    <!-- About URLs -->
+    <string name="web_portal_url">http://192.168.1.6/hemoscan/index.html</string>
+    <string name="support_email">lakeshlakesh526262@gmail.com</string>
+
+    <!-- Notifications settings -->
+    <string name="title_notifications">अधिसूचना प्राथमिकताएं</string>
+    <string name="title_storage">डेटा और स्टोरेज</string>
+    <string name="action_clear_cache">कैश साफ़ करें</string>
+</resources>
