@@ -1,0 +1,46 @@
+name: ⚙️ PHP & Python Backend CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  validate-backend:
+    name: Validate PHP API & Python AI Inference
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP Environment
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, pdo, pdo_mysql, mysqli, gd, curl
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: PHP Syntax Linter Check (All API Endpoints)
+        run: |
+          cd Backend
+          for file in *.php; do
+            echo "Linting $file..."
+            php -l "$file"
+          done
+
+      - name: Python AI Inference Syntax Verification
+        run: |
+          cd Backend
+          python -m py_compile inference.py
+
+      - name: Execute Backend Diagnostic Check
+        run: |
+          cd Backend
+          php install.php

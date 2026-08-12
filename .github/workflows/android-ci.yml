@@ -1,0 +1,53 @@
+name: 📱 Android App CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-and-test-android:
+    name: Build & Test Android App
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17 (JDK)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Grant Gradle Execute Permission
+        run: chmod +x Android-App/gradlew
+
+      - name: Run JVM Unit Tests
+        run: |
+          cd Android-App
+          ./gradlew testDebugUnitTest --no-daemon
+
+      - name: Build Android Debug APK
+        run: |
+          cd Android-App
+          ./gradlew assembleDebug --no-daemon -x test
+
+      - name: Upload Debug APK Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-debug-apk
+          path: Android-App/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 14
+
+      - name: Upload Test Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-test-reports
+          path: Android-App/app/build/reports/tests/testDebugUnitTest/
+          retention-days: 14

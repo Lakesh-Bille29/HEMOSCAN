@@ -1,0 +1,48 @@
+name: 🌐 Web Application CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-and-test-web:
+    name: Test & Build React Web App
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: Web
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: 'Web/package-lock.json'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Run Vitest Unit Tests
+        run: npx vitest run
+
+      - name: Build Production Web Bundle
+        run: npm run build
+
+      - name: Upload Production Web Dist Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-dist-bundle
+          path: Web/dist/
+          retention-days: 14
