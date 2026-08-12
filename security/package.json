@@ -1,0 +1,14 @@
+{
+  "name": "hemoscan-vulnerability-sast-suite",
+  "version": "2.0.0",
+  "description": "350+ OWASP Vulnerability & SAST Security Testing Suite for HemoScan",
+  "main": "test/security.spec.js",
+  "scripts": {
+    "test": "mocha test/security.spec.js --timeout 120000"
+  },
+  "dependencies": {
+    "chai": "^4.3.10",
+    "exceljs": "^4.4.0",
+    "mocha": "^10.7.3"
+  }
+}

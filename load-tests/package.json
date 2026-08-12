@@ -1,0 +1,14 @@
+{
+  "name": "hemoscan-load-testing-suite",
+  "version": "2.0.0",
+  "description": "350+ Data-Driven k6 Load & Performance Testing Suite for HemoScan API",
+  "main": "test/load.spec.js",
+  "scripts": {
+    "test": "mocha test/load.spec.js --timeout 120000"
+  },
+  "dependencies": {
+    "chai": "^4.3.10",
+    "exceljs": "^4.4.0",
+    "mocha": "^10.7.3"
+  }
+}
