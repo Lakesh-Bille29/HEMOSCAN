@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="10dp"
+    app:cardCornerRadius="16dp"
+    app:cardElevation="2dp"
+    app:cardBackgroundColor="?attr/colorSurface"
+    app:strokeColor="?attr/colorOutlineVariant"
+    app:strokeWidth="1dp"
+    android:stateListAnimator="@anim/card_click_animator"
+    android:clickable="true"
+    android:focusable="true">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="12dp">
+
+        <!-- 68x68dp CT Thumbnail Card -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/thumbnailCard"
+            android:layout_width="68dp"
+            android:layout_height="68dp"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="0dp"
+            app:strokeColor="?attr/colorOutlineVariant"
+            app:strokeWidth="1dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <ImageView
+                android:id="@+id/scanThumbnail"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="centerCrop"
+                android:src="@drawable/logo"
+                tools:ignore="ContentDescription" />
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Patient Name -->
+        <TextView
+            android:id="@+id/patientName"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="14dp"
+            android:layout_marginEnd="8dp"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="John Anderson"
+            android:textAppearance="?attr/textAppearanceTitleMedium"
+            android:textColor="?attr/colorOnSurface"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            app:layout_constraintEnd_toStartOf="@id/resultBadge"
+            app:layout_constraintStart_toEndOf="@id/thumbnailCard"
+            app:layout_constraintTop_toTopOf="@id/thumbnailCard" />
+
+        <!-- Hemorrhage Subtype & Confidence Score -->
+        <TextView
+            android:id="@+id/hemorrhageDetails"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="3dp"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="Epidural Hemorrhage (98.5%)"
+            android:textAppearance="?attr/textAppearanceBodyMedium"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:textSize="13sp"
+            app:layout_constraintEnd_toStartOf="@id/downloadPdfBtn"
+            app:layout_constraintStart_toStartOf="@id/patientName"
+            app:layout_constraintTop_toBottomOf="@id/patientName" />
+
+        <!-- Date & Time with Clock Icon -->
+        <LinearLayout
+            android:id="@+id/dateContainer"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            app:layout_constraintBottom_toBottomOf="@id/thumbnailCard"
+            app:layout_constraintEnd_toStartOf="@id/downloadPdfBtn"
+            app:layout_constraintStart_toStartOf="@id/patientName"
+            app:layout_constraintTop_toBottomOf="@id/hemorrhageDetails">
+
+            <ImageView
+                android:layout_width="12dp"
+                android:layout_height="12dp"
+                android:layout_marginEnd="4dp"
+                android:src="@drawable/ic_clock"
+                app:tint="?attr/colorOnSurfaceVariant"
+                tools:ignore="ContentDescription" />
+
+            <TextView
+                android:id="@+id/scanDate"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="Apr 25, 2026 • 10:30 AM"
+                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                android:textSize="11sp" />
+        </LinearLayout>
+
+        <!-- Top-Right Compact Status Badge Pill -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/resultBadge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="20dp"
+            app:cardElevation="0dp"
+            app:strokeWidth="0dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <TextView
+                android:id="@+id/resultStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:paddingHorizontal="10dp"
+                android:paddingVertical="4dp"
+                android:text="NORMAL"
+                android:textAppearance="?attr/textAppearanceLabelSmall"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                tools:background="#E8F5E9"
+                tools:textColor="#2E7D32" />
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Bottom-Right Quick Download PDF Icon Button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/downloadPdfBtn"
+            style="@style/Widget.Material3.Button.IconButton.Filled.Tonal"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:insetLeft="0dp"
+            android:insetTop="0dp"
+            android:insetRight="0dp"
+            android:insetBottom="0dp"
+            android:padding="6dp"
+            app:icon="@drawable/ic_download"
+            app:iconSize="18dp"
+            app:iconGravity="textStart"
+            app:iconPadding="0dp"
+            app:cornerRadius="10dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            tools:ignore="ContentDescription" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</com.google.android.material.card.MaterialCardView>

@@ -1,0 +1,234 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fitsSystemWindows="true"
+    android:orientation="vertical">
+
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/toolbar_height"
+        android:background="@color/bg_white"
+        app:title="Upload Brain Scan"
+        app:navigationIcon="@drawable/ic_back"/>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="@dimen/spacing_large"
+            android:gravity="center">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Step 3 of 4"
+                android:textSize="@dimen/text_body_medium"
+                android:textColor="@color/text_secondary"
+                android:layout_marginBottom="@dimen/spacing_normal"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Select a Brain Scan Image"
+                android:textSize="@dimen/text_headline_medium"
+                android:textStyle="bold"
+                android:gravity="center"
+                android:layout_marginBottom="@dimen/spacing_xlarge"/>
+
+            <!-- Gallery Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/galleryCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                style="@style/AppCard"
+                android:clickable="true"
+                android:focusable="true"
+                android:layout_marginBottom="@dimen/spacing_normal">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:padding="@dimen/spacing_large"
+                    android:gravity="center_vertical">
+
+                    <FrameLayout
+                        android:layout_width="48dp"
+                        android:layout_height="48dp">
+                        <View
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:background="@drawable/circle_background"/>
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/ic_image"
+                            android:layout_gravity="center"
+                            app:tint="@color/medical_blue"
+                            android:contentDescription="@null"/>
+                    </FrameLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:layout_marginStart="@dimen/spacing_normal">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Choose from Gallery"
+                            android:textSize="@dimen/text_body_large"
+                            android:textStyle="bold"/>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="PNG, JPEG, JPG supported"
+                            android:textSize="@dimen/text_body_medium"
+                            android:textColor="@color/text_secondary"/>
+                    </LinearLayout>
+
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:src="@drawable/ic_chevron_right"
+                        app:tint="@color/neutral_gray"
+                        android:contentDescription="@null"/>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Camera Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cameraCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                style="@style/AppCard"
+                android:clickable="true"
+                android:focusable="true"
+                android:layout_marginBottom="@dimen/spacing_xlarge">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:padding="@dimen/spacing_large"
+                    android:gravity="center_vertical">
+
+                    <FrameLayout
+                        android:layout_width="48dp"
+                        android:layout_height="48dp">
+                        <View
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:background="@drawable/circle_background"/>
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/ic_camera"
+                            android:layout_gravity="center"
+                            app:tint="@color/medical_blue"
+                            android:contentDescription="@null"/>
+                    </FrameLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:layout_marginStart="@dimen/spacing_normal">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Take a Photo"
+                            android:textSize="@dimen/text_body_large"
+                            android:textStyle="bold"/>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Use device camera to capture scan"
+                            android:textSize="@dimen/text_body_medium"
+                            android:textColor="@color/text_secondary"/>
+                    </LinearLayout>
+
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:src="@drawable/ic_chevron_right"
+                        app:tint="@color/neutral_gray"
+                        android:contentDescription="@null"/>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Preview of selected image -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/previewCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                style="@style/AppCard"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="@dimen/spacing_normal">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Selected Image"
+                        android:textStyle="bold"
+                        android:textSize="@dimen/text_body_large"
+                        android:layout_marginBottom="@dimen/spacing_small"/>
+
+                    <ImageView
+                        android:id="@+id/selectedImageView"
+                        android:layout_width="match_parent"
+                        android:layout_height="200dp"
+                        android:scaleType="centerCrop"
+                        android:contentDescription="Selected scan image"/>
+
+                    <TextView
+                        android:id="@+id/imageStatusText"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Image ready for processing"
+                        android:textColor="@color/success_green"
+                        android:textSize="@dimen/text_body_medium"
+                        android:layout_marginTop="@dimen/spacing_small"/>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+        </LinearLayout>
+    </ScrollView>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="@dimen/spacing_normal"
+        android:background="@color/bg_white"
+        android:elevation="4dp">
+
+        <Button
+            android:id="@+id/continueButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Continue to Processing"
+            android:enabled="false"
+            style="@style/PrimaryButton"/>
+    </LinearLayout>
+</LinearLayout>

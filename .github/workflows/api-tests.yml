@@ -43,15 +43,47 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Install Python AI Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ai-edge-litert numpy Pillow || pip install tflite-runtime numpy Pillow
+
+      - name: Prepare Backend Configuration
+        run: |
+          BACKEND_DIR="Backend"
+          if [ ! -d "$BACKEND_DIR" ]; then BACKEND_DIR="backend"; fi
+          if [ ! -f "$BACKEND_DIR/config.php" ] && [ -f "$BACKEND_DIR/config.example.php" ]; then
+            cp "$BACKEND_DIR/config.example.php" "$BACKEND_DIR/config.php"
+          fi
+
       - name: Initialize Database & Import Schema
         run: |
+          BACKEND_DIR="Backend"
+          if [ ! -d "$BACKEND_DIR" ]; then BACKEND_DIR="backend"; fi
           mysql -h 127.0.0.1 -u root -e "CREATE DATABASE IF NOT EXISTS brain_scan_db;"
-          mysql -h 127.0.0.1 -u root brain_scan_db < backend/setup_db.sql
+          if [ -f "$BACKEND_DIR/setup_db.sql" ]; then
+            mysql -h 127.0.0.1 -u root brain_scan_db < "$BACKEND_DIR/setup_db.sql"
+          fi
+          if [ -f "$BACKEND_DIR/brain_scan_db.sql" ]; then
+            mysql -h 127.0.0.1 -u root brain_scan_db < "$BACKEND_DIR/brain_scan_db.sql" || true
+          fi
+
+      - name: Create Reports Directory
+        run: mkdir -p reports/api
 
       - name: Start PHP Built-in REST API Server
         run: |
-          php -S 127.0.0.1:8000 -t backend &
-          sleep 4
+          BACKEND_DIR="Backend"
+          if [ ! -d "$BACKEND_DIR" ]; then BACKEND_DIR="backend"; fi
+          php -S 127.0.0.1:8000 -t "$BACKEND_DIR" &
+          for i in {1..15}; do
+            if curl -s http://127.0.0.1:8000/ > /dev/null; then
+              echo "PHP Built-in server ready on port 8000!"
+              break
+            fi
+            echo "Waiting for PHP server..."
+            sleep 1
+          done
 
       - name: Install API Automation Dependencies
         run: |
@@ -61,6 +93,10 @@ jobs:
       - name: Run PHP REST API Suite (350 Tests)
         env:
           API_BASE_URL: "http://127.0.0.1:8000"
+          DB_HOST: "127.0.0.1"
+          DB_USER: "root"
+          DB_PASSWORD: ""
+          DB_NAME: "brain_scan_db"
         run: |
           cd automation/api
           npm test

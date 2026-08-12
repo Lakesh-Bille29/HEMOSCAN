@@ -20,27 +20,35 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: 'web/package-lock.json'
+
+      - name: Create Reports Directory
+        run: mkdir -p reports/selenium reports/failures/selenium
 
       - name: Install Web Dependencies & Build React App
         run: |
-          cd web
+          if [ -d "Web" ]; then cd Web; else cd web; fi
           npm ci
           npm run build
 
       - name: Start React Vite Preview Server in Background
         run: |
-          cd web
+          if [ -d "Web" ]; then cd Web; else cd web; fi
           npm run preview -- --host 127.0.0.1 --port 5173 &
-          sleep 5
+          for i in {1..15}; do
+            if curl -s http://127.0.0.1:5173 > /dev/null; then
+              echo "Vite Preview server ready on port 5173!"
+              break
+            fi
+            echo "Waiting for Vite Preview server..."
+            sleep 1
+          done
 
       - name: Install Selenium Framework Dependencies
         run: |
           cd automation/selenium
           npm ci
 
-      - name: Install Google Chrome & ChromeDriver
+      - name: Install Google Chrome Browser
         run: |
           sudo apt-get update
           sudo apt-get install -y google-chrome-stable
