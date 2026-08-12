@@ -750,6 +750,10 @@ body {
   .hide-tablet { display: none !important; }
 }
 
+@media (min-width: 769px) {
+  .show-mobile-only { display: none !important; }
+}
+
 @media (max-width: 768px) {
   .hide-mobile { display: none !important; }
 

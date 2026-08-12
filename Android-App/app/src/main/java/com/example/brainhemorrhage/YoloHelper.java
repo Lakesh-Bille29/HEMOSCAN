@@ -36,58 +36,68 @@ public class YoloHelper {
     }
 
     public YoloResult detect(Context context, Uri imageUri) throws IOException {
-        Bitmap originalBitmap = MediaStore.Images.Media.getBitmap(context.getContentResolver(), imageUri);
-        
-        // Stage 1: Classifier as Gatekeeper
-        ClassifierHelper.ClassifierResult clsResult = classifierHelper.classify(originalBitmap);
-        if ("non_brain_ct".equals(clsResult.predictedClass)) {
+        Bitmap originalBitmap = BitmapUtils.decodeSampledBitmapFromUri(context, imageUri);
+        if (originalBitmap == null) {
             YoloResult result = new YoloResult();
             result.validationFailed = true;
-            result.validationError = "Input rejected: not a brain CT image";
+            result.validationError = "Failed to load scan image";
             return result;
         }
-        
-        // Stage 2: Detector for Hemorrhage (Lazy loading)
-        if (detectorHelper == null) {
-            detectorHelper = new DetectorHelper(context);
-        }
-        DetectorHelper.DetectorResult detResult = detectorHelper.detect(context, originalBitmap);
-        
-        YoloResult result = new YoloResult();
-        result.processedImageUri = detResult.processedImageUri;
-        result.validationFailed = false;
 
-        if (detResult.hasHemorrhage) {
-            // Stage 3: Subtype Classifier (Lazy loading)
-            if (subtypeClassifierHelper == null) {
-                subtypeClassifierHelper = new SubtypeClassifierHelper(context);
+        try {
+            // Stage 1: Classifier as Gatekeeper
+            ClassifierHelper.ClassifierResult clsResult = classifierHelper.classify(originalBitmap);
+            if ("non_brain_ct".equals(clsResult.predictedClass)) {
+                YoloResult result = new YoloResult();
+                result.validationFailed = true;
+                result.validationError = "Input rejected: not a brain CT image";
+                return result;
             }
-            SubtypeClassifierHelper.SubtypeResult subResult = subtypeClassifierHelper.classifySubtypes(originalBitmap);
             
-            result.hasHemorrhage = true;
-            result.highestConfidence = detResult.highestConfidence;
-            result.detectionCount = detResult.detectionCount;
+            // Stage 2: Detector for Hemorrhage (Lazy loading)
+            if (detectorHelper == null) {
+                detectorHelper = new DetectorHelper(context);
+            }
+            DetectorHelper.DetectorResult detResult = detectorHelper.detect(context, originalBitmap);
             
-            // Populate subtype probabilities
-            result.intraventricular = subResult.intraventricular;
-            result.intraparenchymal = subResult.intraparenchymal;
-            result.subarachnoid = subResult.subarachnoid;
-            result.epidural = subResult.epidural;
-            result.subdural = subResult.subdural;
-        } else {
-            result.hasHemorrhage = false;
-            result.highestConfidence = detResult.highestConfidence;
-            result.detectionCount = 0;
+            YoloResult result = new YoloResult();
+            result.processedImageUri = detResult.processedImageUri;
+            result.validationFailed = false;
+
+            if (detResult.hasHemorrhage) {
+                // Stage 3: Subtype Classifier (Lazy loading)
+                if (subtypeClassifierHelper == null) {
+                    subtypeClassifierHelper = new SubtypeClassifierHelper(context);
+                }
+                SubtypeClassifierHelper.SubtypeResult subResult = subtypeClassifierHelper.classifySubtypes(originalBitmap);
+                
+                result.hasHemorrhage = true;
+                result.highestConfidence = detResult.highestConfidence;
+                result.detectionCount = detResult.detectionCount;
+                
+                // Populate subtype probabilities
+                result.intraventricular = subResult.intraventricular;
+                result.intraparenchymal = subResult.intraparenchymal;
+                result.subarachnoid = subResult.subarachnoid;
+                result.epidural = subResult.epidural;
+                result.subdural = subResult.subdural;
+            } else {
+                result.hasHemorrhage = false;
+                result.highestConfidence = detResult.highestConfidence;
+                result.detectionCount = 0;
+                
+                // Populate empty subtype probabilities
+                result.intraventricular = 0.0f;
+                result.intraparenchymal = 0.0f;
+                result.subarachnoid = 0.0f;
+                result.epidural = 0.0f;
+                result.subdural = 0.0f;
+            }
             
-            // Populate empty subtype probabilities
-            result.intraventricular = 0.0f;
-            result.intraparenchymal = 0.0f;
-            result.subarachnoid = 0.0f;
-            result.epidural = 0.0f;
-            result.subdural = 0.0f;
+            return result;
+        } finally {
+            BitmapUtils.safeRecycle(originalBitmap);
         }
-        
-        return result;
     }
 
     public void close() {

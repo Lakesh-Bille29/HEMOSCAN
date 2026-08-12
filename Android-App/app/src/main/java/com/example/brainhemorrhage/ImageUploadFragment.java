@@ -182,30 +182,37 @@ public class ImageUploadFragment extends Fragment {
     }
 
     private void launchGallery() {
-        Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
         intent.setType("image/*");
-        galleryLauncher.launch(intent);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        try {
+            galleryLauncher.launch(Intent.createChooser(intent, "Select CT Scan Image"));
+        } catch (Exception e) {
+            Intent fallbackIntent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+            fallbackIntent.setType("image/*");
+            try {
+                galleryLauncher.launch(fallbackIntent);
+            } catch (Exception ex) {
+                CustomToast.show(getView(), "Unable to open gallery.", false);
+            }
+        }
     }
 
     private void launchCamera() {
-        Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-        // Only launch if there's a camera app available
-        if (intent.resolveActivity(requireActivity().getPackageManager()) == null) {
-            CustomToast.show(getView(), "No camera app found on this device.", false);
-            return;
-        }
-
-        // Create a temp file for the camera output via FileProvider
         try {
             File photoFile = createTempImageFile();
             cameraImageUri = FileProvider.getUriForFile(
                     requireContext(),
                     requireContext().getPackageName() + ".fileprovider",
                     photoFile);
+            Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
             intent.putExtra(MediaStore.EXTRA_OUTPUT, cameraImageUri);
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
             cameraLauncher.launch(intent);
-        } catch (IOException e) {
-            CustomToast.show(getView(), "Could not create image file.", false);
+        } catch (android.content.ActivityNotFoundException e) {
+            CustomToast.show(getView(), "No camera app found on this device.", false);
+        } catch (Exception e) {
+            CustomToast.show(getView(), "Could not launch camera.", false);
         }
     }
 

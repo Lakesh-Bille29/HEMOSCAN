@@ -2,9 +2,12 @@ package com.example.brainhemorrhage.api;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+
 import java.util.concurrent.TimeUnit;
+
 import okhttp3.OkHttpClient;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
@@ -12,11 +15,10 @@ import retrofit2.converter.gson.GsonConverterFactory;
 public class RetrofitClient {
     // Default fallback URL — used when no custom URL is saved in SharedPreferences.
     // Change this to your server's IP for initial development builds.
-    public static final String DEFAULT_BASE_URL = "http://10.18.189.84/brainscan_api/";
+    public static final String DEFAULT_BASE_URL = "http://10.138.68.84/brainscan_api/";
     public static final String BASE_URL = DEFAULT_BASE_URL;
     private static final String PREFS_NAME = "HemoScanPrefs";
     private static final String KEY_SERVER_URL = "server_url";
-
     private static Retrofit retrofit;
     private static String currentBaseUrl = null;
 

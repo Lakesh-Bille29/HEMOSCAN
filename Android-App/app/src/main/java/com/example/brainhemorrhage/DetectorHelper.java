@@ -47,7 +47,8 @@ public class DetectorHelper {
     public DetectorHelper(Context context) throws IOException {
         MappedByteBuffer modelFile = FileUtil.loadMappedFile(context, MODEL_FILE);
         Interpreter.Options options = new Interpreter.Options();
-        options.setNumThreads(4);
+        int numThreads = Math.max(1, Math.min(Runtime.getRuntime().availableProcessors(), 4));
+        options.setNumThreads(numThreads);
         interpreter = new Interpreter(modelFile, options);
 
         int[] inputShape = interpreter.getInputTensor(0).shape();
@@ -71,6 +72,10 @@ public class DetectorHelper {
                 inputBuffer.putFloat(((val >> 8) & 0xFF) / 255.0f);
                 inputBuffer.putFloat((val & 0xFF) / 255.0f);
             }
+        }
+
+        if (resizedBitmap != mutableBitmap && resizedBitmap != originalBitmap) {
+            BitmapUtils.safeRecycle(resizedBitmap);
         }
 
         int[] outputShape = interpreter.getOutputTensor(0).shape();
@@ -196,6 +201,8 @@ public class DetectorHelper {
         FileOutputStream out = new FileOutputStream(tempFile);
         mutableBitmap.compress(Bitmap.CompressFormat.JPEG, 90, out);
         out.close();
+
+        BitmapUtils.safeRecycle(mutableBitmap);
 
         result.processedImageUri = Uri.fromFile(tempFile);
         return result;

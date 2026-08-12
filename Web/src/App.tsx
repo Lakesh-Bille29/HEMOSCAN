@@ -5,7 +5,7 @@ import {
   ChevronRight, ArrowLeft, Lock, Mail, Smartphone, Database, Shield,
   Building2, BadgeCheck, Wifi, Brain, Zap, TrendingUp, Eye,
   RefreshCw, Bell, Moon, Sun, Globe, Star,
-  HeartPulse, ScanLine, Microscope, FileText, Info, X, Plus, Trash2
+  HeartPulse, ScanLine, Microscope, FileText, Info, X, Plus, Trash2, Download
 } from 'lucide-react';
 import { apiService, getApiBaseUrl } from './services/api';
 import type { ScanItemDto, NotificationItem } from './services/api';
@@ -150,6 +150,29 @@ export default function App() {
   const [contactLoading, setContactLoading] = useState(false);
   const [contactSuccess, setContactSuccess] = useState(false);
   const [contactTicketNumber, setContactTicketNumber] = useState('');
+  const [userTickets, setUserTickets] = useState<any[]>([]);
+  const [loadingTickets, setLoadingTickets] = useState(false);
+
+  const fetchUserTickets = async () => {
+    if (!doctor?.email) return;
+    setLoadingTickets(true);
+    try {
+      const res = await apiService.getTickets(doctor.email);
+      if (res.status === 'success' && (res as any).data) {
+        setUserTickets((res as any).data);
+      }
+    } catch (e) {
+      /* ignore */
+    } finally {
+      setLoadingTickets(false);
+    }
+  };
+
+  useEffect(() => {
+    if (settingsSubPage === 'contact' && doctor?.email) {
+      fetchUserTickets();
+    }
+  }, [settingsSubPage, doctor?.email]);
   // Change Password form
   const [cpCurrent, setCpCurrent] = useState('');
   const [cpNew, setCpNew] = useState('');
@@ -542,6 +565,78 @@ export default function App() {
     window.open('https://play.google.com/store/apps/details?id=com.example.brainhemorrhage', '_blank', 'noopener,noreferrer');
   };
 
+  // ── Download PDF Report Helper ─────────────────────────────────────────────
+  const handleDownloadResultPDF = (scan: any) => {
+    if (!scan) return;
+    const pName = scan.patient_name || scan.patientName || 'Patient #' + (scan.id || '1');
+    const resultStr = scan.result || 'Normal';
+    const isAbnormal = resultStr.toLowerCase().includes('abnormal') || (resultStr.toLowerCase().includes('hemorrhage') && !resultStr.toLowerCase().includes('no hemorrhage'));
+    const status = isAbnormal ? 'ABNORMAL' : 'NORMAL';
+    const dateStr = scan.created_at || scan.date || scan.date_added || new Date().toLocaleDateString();
+    
+    const reportWindow = window.open('', '_blank');
+    if (!reportWindow) {
+      setMessage({ type: 'error', text: 'Popup blocked. Please allow popups to download PDF.' });
+      return;
+    }
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>HemoScan_Report_${scan.id || '1'}</title>
+        <style>
+          body { font-family: system-ui, -apple-system, sans-serif; background: #f8fafc; color: #0f172a; margin: 0; padding: 40px; }
+          .report-card { max-width: 680px; margin: 0 auto; background: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0; padding: 36px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
+          .header { background: #1e1b4b; color: #ffffff; padding: 24px 32px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+          .title { font-size: 24px; font-weight: 800; color: #818cf8; margin: 0; }
+          .subtitle { font-size: 13px; color: #cbd5e1; margin-top: 4px; }
+          .meta-box { background: #f1f5f9; padding: 16px 20px; border-radius: 10px; margin-bottom: 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 14px; }
+          .status-pill { display: inline-block; padding: 6px 16px; border-radius: 20px; font-weight: 800; font-size: 13px; letter-spacing: 0.5px; background: ${isAbnormal ? '#ffe4e6' : '#dcfce7'}; color: ${isAbnormal ? '#e11d48' : '#16a34a'}; border: 1px solid ${isAbnormal ? '#fecdd3' : '#bbf7d0'}; }
+          .image-preview { text-align: center; margin: 24px 0; background: #0f172a; padding: 16px; border-radius: 12px; }
+          .image-preview img { max-width: 100%; max-height: 320px; border-radius: 8px; border: 1px solid #334155; }
+          .disclaimer { font-size: 11px; color: #64748b; margin-top: 32px; padding-top: 16px; border-top: 1px solid #e2e8f0; text-align: center; }
+          @media print { body { background: #fff; padding: 0; } .report-card { border: none; box-shadow: none; } }
+        </style>
+      </head>
+      <body>
+        <div class="report-card">
+          <div class="header">
+            <div>
+              <div class="title">HemoScan AI</div>
+              <div class="subtitle">Diagnostic Neuroimaging Report</div>
+            </div>
+            <div style="text-align: right; font-size: 12px; color: #a5b4fc;">
+              <div>Date: ${dateStr}</div>
+              <div>Report ID: HST-${scan.id || '1'}</div>
+            </div>
+          </div>
+          <div class="meta-box">
+            <div><strong>Patient Name:</strong> ${pName}</div>
+            <div><strong>Age / Gender:</strong> ${scan.patient_age || scan.age || 'N/A'} / ${scan.patient_gender || scan.gender || 'N/A'}</div>
+            <div><strong>Diagnosis Status:</strong> <span class="status-pill">${status}</span></div>
+            <div><strong>Findings:</strong> ${resultStr}</div>
+          </div>
+          ${(scan.image_path || scan.imageUri || scan.imagePath) ? `
+            <div class="image-preview">
+              <img src="${(scan.image_path || scan.imageUri || scan.imagePath).startsWith('http') ? (scan.image_path || scan.imageUri || scan.imagePath) : ('http://localhost/brainscan_api/' + (scan.image_path || scan.imageUri || scan.imagePath))}" alt="CT Scan" />
+            </div>
+          ` : ''}
+          <div class="disclaimer">
+            CONFIDENTIAL MEDICAL REPORT — Generated by HemoScan AI Decision Support.<br/>
+            Must be reviewed by a certified physician before clinical intervention.
+          </div>
+        </div>
+        <script>
+          window.onload = () => { window.print(); };
+        </script>
+      </body>
+      </html>
+    `;
+    reportWindow.document.write(htmlContent);
+    reportWindow.document.close();
+  };
+
   const handleContactSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!contactMessage || contactMessage.trim().length < 20) {
@@ -563,6 +658,7 @@ export default function App() {
         setContactTicketNumber((res as any).ticket_number || '');
         setContactSuccess(true);
         setContactMessage('');
+        fetchUserTickets();
         setMessage({ type: 'success', text: 'Support ticket submitted! Check your email for confirmation.' });
       } else {
         setMessage({ type: 'error', text: res.message || 'Failed to submit ticket. Please try again.' });
@@ -1435,11 +1531,22 @@ export default function App() {
                                       </div>
                                     </div>
                                   </div>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
                                     <span className={isAbnormal ? 'badge badge-abnormal' : 'badge badge-normal'}>
                                       {isAbnormal ? '⚠ Abnormal' : '✓ Normal'}
                                     </span>
                                     <span style={{ fontSize: '11px', color: 'var(--text-quaternary)' }}>{scan.date_added}</span>
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); handleDownloadResultPDF(scan); }}
+                                      title="Download PDF Diagnostic Report"
+                                      style={{
+                                        background: 'var(--surface-1)', border: '1px solid var(--border-subtle)',
+                                        borderRadius: '8px', padding: '6px 10px', cursor: 'pointer', display: 'flex',
+                                        alignItems: 'center', gap: '5px', color: 'var(--brand-600)', fontSize: '12px', fontWeight: 600
+                                      }}
+                                    >
+                                      <Download size={13} /> PDF
+                                    </button>
                                   </div>
                                 </motion.div>
                               );
@@ -2412,6 +2519,47 @@ export default function App() {
                             </form>
                           )}
                         </div>
+
+                        {/* Submitted Tickets History */}
+                        <div className="card" style={{ padding: '24px', marginTop: '16px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                            <div style={{ fontSize: '16px', fontWeight: 800, color: 'var(--text-primary)' }}>My Support Tickets</div>
+                            <button onClick={fetchUserTickets} style={{ background: 'none', border: 'none', color: 'var(--brand-600)', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
+                              {loadingTickets ? 'Refreshing...' : '↻ Refresh'}
+                            </button>
+                          </div>
+                          {loadingTickets ? (
+                            <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-quaternary)', fontSize: '13px' }}>Loading support tickets...</div>
+                          ) : userTickets.length === 0 ? (
+                            <div style={{ textAlign: 'center', padding: '24px 16px', color: 'var(--text-quaternary)', fontSize: '13px' }}>No support tickets submitted yet.</div>
+                          ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                              {userTickets.map((t: any) => (
+                                <div key={t.ticket_number || t.id} style={{ background: 'var(--surface-1)', border: '1px solid var(--border-subtle)', borderRadius: '12px', padding: '16px' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                                    <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--brand-600)', fontFamily: 'var(--font-mono)' }}>#{t.ticket_number}</span>
+                                    <span style={{
+                                      fontSize: '11px', fontWeight: 700, padding: '3px 10px', borderRadius: '100px',
+                                      background: t.status === 'resolved' || t.status === 'closed' ? 'var(--accent-50)' : 'var(--brand-50)',
+                                      color: t.status === 'resolved' || t.status === 'closed' ? 'var(--accent-600)' : 'var(--brand-600)',
+                                      border: '1px solid ' + (t.status === 'resolved' || t.status === 'closed' ? 'var(--accent-400)' : 'var(--brand-200)')
+                                    }}>
+                                      {t.status ? t.status.toUpperCase() : 'OPEN'}
+                                    </span>
+                                  </div>
+                                  <div style={{ fontSize: '12px', color: 'var(--text-quaternary)', marginBottom: '6px' }}>Category: <strong style={{ color: 'var(--text-tertiary)' }}>{t.category}</strong> · {t.created_at}</div>
+                                  <div style={{ fontSize: '13.5px', color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: t.admin_reply ? '10px' : '0' }}>{t.message}</div>
+                                  {t.admin_reply && (
+                                    <div style={{ background: 'var(--surface-0)', borderLeft: '3px solid var(--brand-500)', padding: '10px 14px', borderRadius: '4px 8px 8px 4px', marginTop: '8px' }}>
+                                      <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--brand-600)', marginBottom: '3px' }}>Support Team Reply:</div>
+                                      <div style={{ fontSize: '13px', color: 'var(--text-primary)' }}>{t.admin_reply}</div>
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       </motion.div>
                     )}
 
@@ -2617,7 +2765,7 @@ export default function App() {
             </main>
 
             {/* ── Bottom Navigation ── */}
-            <footer style={{
+            <footer className="show-mobile-only" style={{
               background: 'var(--surface-0)', borderTop: '1px solid var(--border-subtle)',
               position: 'sticky', bottom: 0, zIndex: 50,
               boxShadow: '0 -4px 20px rgba(0,0,0,0.06)'

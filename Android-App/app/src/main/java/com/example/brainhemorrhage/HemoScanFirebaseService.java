@@ -148,6 +148,7 @@ public class HemoScanFirebaseService extends FirebaseMessagingService {
     }
 
     private void ensureChannel(NotificationManager manager, String channelId) {
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.O) return;
         if (manager.getNotificationChannel(channelId) != null) return;
 
         String name;

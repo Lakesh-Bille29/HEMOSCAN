@@ -9,12 +9,16 @@ android {
 
     defaultConfig {
         applicationId = "com.example.brainhemorrhage"
-        minSdk = 27
+        minSdk = 24
         targetSdk = 35
         versionCode = 1
         versionName = "2.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        ndk {
+            abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64"))
+        }
     }
 
     androidResources {
@@ -23,13 +27,21 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
         }
     }
+
+    packaging {
+        jniLibs {
+            useLegacyPackaging = true
+        }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -37,6 +49,7 @@ android {
 }
 
 dependencies {
+    implementation("androidx.exifinterface:exifinterface:1.3.7")
     implementation(libs.androidx.navigation.fragment)
     implementation(libs.androidx.navigation.navigation.fragment)
     implementation(libs.androidx.navigation.navigation.ui)

@@ -80,6 +80,24 @@ public class CustomToast {
         if (context instanceof Activity) {
             View rootView = ((Activity) context).findViewById(android.R.id.content);
             show(rootView, message, isSuccess);
+        } else if (context != null) {
+            android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_SHORT).show();
         }
+    }
+
+    public static void showSuccess(Context context, String message) {
+        show(context, message, true);
+    }
+
+    public static void showError(Context context, String message) {
+        show(context, message, false);
+    }
+
+    public static void showSuccess(View view, String message) {
+        show(view, message, true);
+    }
+
+    public static void showError(View view, String message) {
+        show(view, message, false);
     }
 }

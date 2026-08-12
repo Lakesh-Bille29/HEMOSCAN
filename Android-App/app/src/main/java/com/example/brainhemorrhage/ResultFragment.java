@@ -30,7 +30,7 @@ public class ResultFragment extends Fragment {
     private TextView patientNameText, scanDateText;
     private LinearLayout findingsContainer;
 
-    private Button shareReportButton, backToDashboardButton, viewHistoryButton;
+    private Button downloadPdfButton, shareReportButton, backToDashboardButton, viewHistoryButton;
     private View scanImageCard;
     private ImageView scanImageView;
 
@@ -47,18 +47,9 @@ public class ResultFragment extends Fragment {
         View view = inflater.inflate(R.layout.fragment_result, container, false);
 
         Toolbar toolbar = view.findViewById(R.id.toolbar);
-        toolbar.setNavigationOnClickListener(v -> {
-            if (isExistingPatient && patientId != null) {
-                Bundle navArgs = new Bundle();
-                navArgs.putString("patientId", patientId);
-                navArgs.putString("patientName", patientName);
-                navArgs.putString("patientAge", patientAge);
-                navArgs.putString("patientGender", patientGender);
-                Navigation.findNavController(v).navigate(R.id.action_result_to_patientDetail, navArgs);
-            } else {
-                Navigation.findNavController(v).navigateUp();
-            }
-        });
+        if (toolbar != null) {
+            toolbar.setNavigationOnClickListener(v -> Navigation.findNavController(v).navigateUp());
+        }
 
         // Get patient data
         Bundle args = getArguments();
@@ -81,6 +72,7 @@ public class ResultFragment extends Fragment {
         setupClickListeners(view);
 
         // Connect button touch/bounce scaling
+        if (downloadPdfButton != null) AnimationHelper.applyBouncePress(downloadPdfButton);
         AnimationHelper.applyBouncePress(shareReportButton);
         AnimationHelper.applyBouncePress(backToDashboardButton);
         AnimationHelper.applyBouncePress(viewHistoryButton);
@@ -91,6 +83,7 @@ public class ResultFragment extends Fragment {
             scanImageCard,
             view.findViewById(R.id.patientDetailsCard),
             findingsContainer,
+            downloadPdfButton,
             shareReportButton,
             backToDashboardButton,
             viewHistoryButton
@@ -108,6 +101,7 @@ public class ResultFragment extends Fragment {
         scanDateText = view.findViewById(R.id.scanDateText);
         findingsContainer = view.findViewById(R.id.findingsContainer);
 
+        downloadPdfButton = view.findViewById(R.id.downloadPdfButton);
         shareReportButton = view.findViewById(R.id.shareReportButton);
         backToDashboardButton = view.findViewById(R.id.backToDashboardButton);
         viewHistoryButton = view.findViewById(R.id.viewHistoryButton);
@@ -320,8 +314,51 @@ public class ResultFragment extends Fragment {
 
 
     private void setupClickListeners(View view) {
+        if (downloadPdfButton != null) {
+            downloadPdfButton.setOnClickListener(v -> {
+                android.graphics.Bitmap bitmap = null;
+                if (scanImageView != null && scanImageView.getDrawable() instanceof android.graphics.drawable.BitmapDrawable) {
+                    bitmap = ((android.graphics.drawable.BitmapDrawable) scanImageView.getDrawable()).getBitmap();
+                }
+                
+                String resStr = resultStatusText != null ? resultStatusText.getText().toString() : "NORMAL";
+                if (confidenceText != null && confidenceText.getText() != null) {
+                    resStr += " (" + confidenceText.getText().toString() + ")";
+                }
+
+                ScanItem currentScan = new ScanItem(
+                    patientId != null ? patientId : "1",
+                    patientName != null ? patientName : "Patient",
+                    scanDateText != null ? scanDateText.getText().toString() : "Date N/A",
+                    resStr
+                );
+                currentScan.setAge(patientAge);
+                currentScan.setGender(patientGender);
+
+                java.io.File pdfFile = PdfReportGenerator.generateAndSavePdf(requireContext(), currentScan, bitmap);
+                if (pdfFile != null) {
+                    CustomToast.showSuccess(requireContext(), "PDF report downloaded to Downloads/HemoScan/");
+                } else {
+                    CustomToast.showError(requireContext(), "Failed to save PDF report.");
+                }
+            });
+        }
+
         shareReportButton.setOnClickListener(v -> {
-            // Share functionality placeholder
+            String pName = patientName != null ? patientName : "Patient";
+            String status = resultStatusText != null ? resultStatusText.getText().toString() : "NORMAL";
+            String confidence = confidenceText != null ? confidenceText.getText().toString() : "";
+
+            String shareMessage = "HemoScan AI Brain Hemorrhage Report\n" +
+                "Patient: " + pName + "\n" +
+                "Status: " + status + " " + confidence + "\n" +
+                "Check out HemoScan - The intelligent brain hemorrhage diagnostic platform!";
+
+            android.content.Intent shareIntent = new android.content.Intent(android.content.Intent.ACTION_SEND);
+            shareIntent.setType("text/plain");
+            shareIntent.putExtra(android.content.Intent.EXTRA_SUBJECT, "HemoScan Diagnostic Report - " + pName);
+            shareIntent.putExtra(android.content.Intent.EXTRA_TEXT, shareMessage);
+            startActivity(android.content.Intent.createChooser(shareIntent, "Share Report via"));
         });
 
         backToDashboardButton.setOnClickListener(v -> {

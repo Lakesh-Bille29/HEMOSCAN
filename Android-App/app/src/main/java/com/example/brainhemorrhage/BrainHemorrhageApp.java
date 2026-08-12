@@ -39,6 +39,10 @@ public class BrainHemorrhageApp extends Application {
 
     /** Creates all notification channels. Safe to call multiple times — Android ignores duplicates. */
     private void createNotificationChannels() {
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.O) {
+            return;
+        }
+
         NotificationManager manager =
                 (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         if (manager == null) return;

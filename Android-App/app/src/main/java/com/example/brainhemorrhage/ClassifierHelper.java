@@ -31,7 +31,8 @@ public class ClassifierHelper {
         labels = new ArrayList<>();
 
         Interpreter.Options options = new Interpreter.Options();
-        options.setNumThreads(4);
+        int numThreads = Math.max(1, Math.min(Runtime.getRuntime().availableProcessors(), 4));
+        options.setNumThreads(numThreads);
         interpreter = new Interpreter(modelFile, options);
 
         int[] inputShape = interpreter.getInputTensor(0).shape();
@@ -54,6 +55,10 @@ public class ClassifierHelper {
                 inputBuffer.putFloat(((val >> 8) & 0xFF) / 255.0f);
                 inputBuffer.putFloat((val & 0xFF) / 255.0f);
             }
+        }
+
+        if (resizedBitmap != originalBitmap) {
+            BitmapUtils.safeRecycle(resizedBitmap);
         }
 
         int[] outputShape = interpreter.getOutputTensor(0).shape();

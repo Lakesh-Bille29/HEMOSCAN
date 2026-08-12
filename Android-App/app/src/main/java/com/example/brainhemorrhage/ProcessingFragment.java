@@ -174,13 +174,15 @@ public class ProcessingFragment extends Fragment {
         animatorSet.start();
     }
 
+    private ExecutorService inferenceExecutor;
+
     private void runInference() {
         if (imageUri == null) {
             isError = true;
             return;
         }
-        ExecutorService executor = Executors.newSingleThreadExecutor();
-        executor.execute(() -> {
+        inferenceExecutor = Executors.newSingleThreadExecutor();
+        inferenceExecutor.execute(() -> {
             try {
                 YoloHelper yoloHelper = new YoloHelper(requireContext());
                 tfliteResult = yoloHelper.detect(requireContext(), Uri.parse(imageUri));
@@ -429,27 +431,16 @@ public class ProcessingFragment extends Fragment {
 
     private File getCompressedTempFile(Uri uri) {
         try {
-            InputStream is = requireContext().getContentResolver().openInputStream(uri);
-            Bitmap bitmap = BitmapFactory.decodeStream(is);
-            if (is != null) is.close();
-
+            Bitmap bitmap = BitmapUtils.decodeSampledBitmapFromUri(requireContext(), uri, 1024, 1024);
             if (bitmap == null) return null;
-
-            int maxDim = 1024;
-            int width = bitmap.getWidth();
-            int height = bitmap.getHeight();
-            if (width > maxDim || height > maxDim) {
-                float ratio = Math.min((float) maxDim / width, (float) maxDim / height);
-                int newW = Math.round(width * ratio);
-                int newH = Math.round(height * ratio);
-                bitmap = Bitmap.createScaledBitmap(bitmap, newW, newH, true);
-            }
 
             File tempFile = new File(requireContext().getCacheDir(), "upload_scan_" + System.currentTimeMillis() + ".jpg");
             FileOutputStream fos = new FileOutputStream(tempFile);
             bitmap.compress(Bitmap.CompressFormat.JPEG, 80, fos);
             fos.flush();
             fos.close();
+
+            BitmapUtils.safeRecycle(bitmap);
             return tempFile;
         } catch (Exception e) {
             e.printStackTrace();
@@ -464,6 +455,10 @@ public class ProcessingFragment extends Fragment {
         if (animatorSet != null) {
             animatorSet.cancel();
             animatorSet = null;
+        }
+        if (inferenceExecutor != null && !inferenceExecutor.isShutdown()) {
+            inferenceExecutor.shutdownNow();
+            inferenceExecutor = null;
         }
     }
 }

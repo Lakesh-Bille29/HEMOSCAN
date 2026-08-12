@@ -221,11 +221,15 @@ public class SettingsFragment extends Fragment {
     }
 
     private void shareApp() {
+        String shareMsg = "🧠 Check out HemoScan AI — Clinical Brain Hemorrhage Diagnostic Platform!\n\n" +
+                getString(R.string.msg_share_app) + "\n" +
+                "Download now: https://play.google.com/store/apps/details?id=" + requireActivity().getPackageName();
+
         Intent intent = new Intent(Intent.ACTION_SEND);
         intent.setType("text/plain");
-        intent.putExtra(Intent.EXTRA_SUBJECT, "HemoScan AI");
-        intent.putExtra(Intent.EXTRA_TEXT, getString(R.string.msg_share_app) + "\nDownload now: https://play.google.com/store/apps/details?id=" + requireActivity().getPackageName());
-        startActivity(Intent.createChooser(intent, "Share via"));
+        intent.putExtra(Intent.EXTRA_SUBJECT, "HemoScan AI - Brain Hemorrhage Diagnostic Platform");
+        intent.putExtra(Intent.EXTRA_TEXT, shareMsg);
+        startActivity(Intent.createChooser(intent, "Share HemoScan App via"));
     }
 
     private void rateApp() {

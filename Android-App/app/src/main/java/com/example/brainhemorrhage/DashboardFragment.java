@@ -148,11 +148,17 @@ public class DashboardFragment extends Fragment {
     private void setupRecentScans() {
         scansAdapter = new ScansAdapter(new ArrayList<>(), scan -> {
             Bundle args = new Bundle();
+            args.putString("scanId", String.valueOf(scan.getId()));
             args.putString("patientId", scan.getDbPatientId());
             args.putString("patientName", scan.getPatientName());
             args.putString("patientAge", scan.getAge());
             args.putString("patientGender", scan.getGender());
-            Navigation.findNavController(requireView()).navigate(R.id.action_dashboard_to_patientDetail, args);
+            args.putString("result", scan.getResult());
+            args.putBoolean("isExistingPatient", true);
+            if (scan.getImagePath() != null) {
+                args.putString("imageUri", scan.getImagePath());
+            }
+            Navigation.findNavController(requireView()).navigate(R.id.action_dashboard_to_result, args);
         });
 
         recentScansRecyclerView.setAdapter(scansAdapter);

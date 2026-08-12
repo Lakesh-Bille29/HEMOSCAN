@@ -48,7 +48,8 @@ public class SubtypeClassifierHelper {
     public SubtypeClassifierHelper(Context context) throws IOException {
         MappedByteBuffer modelFile = FileUtil.loadMappedFile(context, MODEL_FILE);
         Interpreter.Options options = new Interpreter.Options();
-        options.setNumThreads(4);
+        int numThreads = Math.max(1, Math.min(Runtime.getRuntime().availableProcessors(), 4));
+        options.setNumThreads(numThreads);
         interpreter = new Interpreter(modelFile, options);
     }
 
@@ -77,6 +78,10 @@ public class SubtypeClassifierHelper {
                 inputBuffer.putFloat(gray);
                 inputBuffer.putFloat(gray);
             }
+        }
+
+        if (resizedBitmap != originalBitmap) {
+            BitmapUtils.safeRecycle(resizedBitmap);
         }
 
         // Prepare inputs map
