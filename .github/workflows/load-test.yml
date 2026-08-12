@@ -1,0 +1,53 @@
+name: ⚡ k6 Load & Performance Testing
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  load-performance-suite:
+    name: Run k6 Performance & Load Test Suite
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup PHP Environment
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, pdo, pdo_mysql, mysqli, gd, curl
+
+      - name: Start PHP Server for Load Test
+        run: |
+          php -S 127.0.0.1:8000 -t Backend &
+          sleep 3
+
+      - name: Install k6 Engine
+        run: |
+          sudo gpg -k
+          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install -y k6
+
+      - name: Create Reports Directory
+        run: mkdir -p reports/k6
+
+      - name: Execute k6 Smoke & Baseline Load Test
+        env:
+          TEST_TARGET_URL: "http://127.0.0.1:8000"
+        run: |
+          k6 run load-tests/smoke.js --out json=reports/k6/summary.json
+
+      - name: Upload Performance Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: k6-performance-reports
+          path: reports/k6/
+          retention-days: 14

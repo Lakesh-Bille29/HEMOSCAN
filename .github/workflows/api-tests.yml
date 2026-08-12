@@ -1,0 +1,73 @@
+name: ⚙️ PHP REST API Integration Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  api-integration-suite:
+    name: Run PHP REST API Integration Suite (350 Tests)
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: ""
+          MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+          MYSQL_DATABASE: brain_scan_db
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup PHP Environment
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, pdo, pdo_mysql, mysqli, gd, curl
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Import Database Schema
+        run: |
+          mysql -h 127.0.0.1 -u root brain_scan_db < Backend/setup_db.sql
+
+      - name: Start PHP Built-in REST API Server
+        run: |
+          php -S 127.0.0.1:8000 -t Backend &
+          sleep 3
+
+      - name: Install API Automation Dependencies
+        run: |
+          cd automation/api
+          npm ci
+
+      - name: Run PHP REST API Suite (350 Tests)
+        env:
+          API_BASE_URL: "http://127.0.0.1:8000"
+        run: |
+          cd automation/api
+          npm test
+
+      - name: Upload API Test Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-reports
+          path: reports/api/
+          retention-days: 14

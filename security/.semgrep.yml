@@ -1,0 +1,21 @@
+rules:
+  - id: php-sqli-raw-query
+    patterns:
+      - pattern: $CONN->query("... $VAR ...")
+    message: "Potential SQL Injection: Use prepared statements ($stmt = $conn->prepare(...)) instead of raw variable interpolation."
+    languages: [php]
+    severity: ERROR
+
+  - id: php-unquoted-header-redirect
+    patterns:
+      - pattern: header("Location: " . $LOCATION);
+    message: "Ensure redirection targets are validated to prevent Open Redirect vulnerabilities."
+    languages: [php]
+    severity: WARNING
+
+  - id: js-hardcoded-secret
+    patterns:
+      - pattern: const $SECRET = "..."
+    message: "Avoid hardcoding API keys or secrets directly in frontend JavaScript/TypeScript."
+    languages: [typescript, javascript]
+    severity: WARNING

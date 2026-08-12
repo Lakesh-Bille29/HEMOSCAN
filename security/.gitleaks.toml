@@ -1,0 +1,23 @@
+# Gitleaks Configuration for HemoScan Repository Secret Detection
+[allowlist]
+description = "Allowed placeholder test strings"
+regexes = [
+  '''YOUR_FCM_SERVER_KEY_HERE''',
+  '''YOUR_RANDOM_ADMIN_SECRET_HERE''',
+  '''ghp_EXAMPLE_TOKEN'''
+]
+paths = [
+  '''Backend/config.example.php'''
+]
+
+[[rules]]
+id = "generic-api-key"
+description = "Generic API Key"
+regex = '''(?i)(key|api|secret|token)\s*[:=]\s*["']([0-9a-zA-Z]{16,64})["']'''
+keywords = ["key", "api", "secret", "token"]
+
+[[rules]]
+id = "gmail-app-password"
+description = "Gmail App Password Leak Detection"
+regex = '''(?i)[a-z]{4}\s+[a-z]{4}\s+[a-z]{4}\s+[a-z]{4}'''
+keywords = ["smtp", "gmail", "password"]

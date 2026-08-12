@@ -1,0 +1,11 @@
+# Trivy File System & Dependency Security Scanner Config
+vulnerability:
+  type:
+    - os
+    - library
+severity:
+  - HIGH
+  - CRITICAL
+ignore-unfixed: true
+format: sarif
+output: trivy-results.sarif

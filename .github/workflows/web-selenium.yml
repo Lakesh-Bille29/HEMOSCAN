@@ -1,0 +1,59 @@
+name: 🌐 Selenium Web Automation
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  selenium-web-suite:
+    name: Run Selenium WebDriver Suite (350 Tests)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'Web/package-lock.json'
+
+      - name: Install Web Dependencies & Build React App
+        run: |
+          cd Web
+          npm ci
+          npm run build
+
+      - name: Install Selenium Framework Dependencies
+        run: |
+          cd automation/selenium
+          npm ci
+
+      - name: Install Google Chrome & ChromeDriver
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y google-chrome-stable
+
+      - name: Run Selenium Web Automation Suite (350 Tests)
+        env:
+          HEADLESS: "true"
+          BROWSER: "chrome"
+        run: |
+          cd automation/selenium
+          npm test
+
+      - name: Upload Selenium Test Artifacts & Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: selenium-reports
+          path: |
+            reports/selenium/index.html
+            reports/selenium/HemoScan_Web_Report.xlsx
+            reports/failures/selenium/
+          retention-days: 14

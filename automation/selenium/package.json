@@ -1,0 +1,22 @@
+{
+  "name": "hemoscan-selenium-automation",
+  "version": "2.0.0",
+  "description": "Enterprise Selenium WebDriver Automation Framework for HemoScan React Web Application",
+  "main": "test/selenium.spec.js",
+  "scripts": {
+    "test": "mocha test/selenium.spec.js --timeout 120000 --reporter mochawesome --reporter-options reportDir=../../reports/selenium,reportFilename=index",
+    "test:chrome": "BROWSER=chrome mocha test/selenium.spec.js --timeout 120000",
+    "test:firefox": "BROWSER=firefox mocha test/selenium.spec.js --timeout 120000",
+    "test:edge": "BROWSER=edge mocha test/selenium.spec.js --timeout 120000"
+  },
+  "dependencies": {
+    "chai": "^4.3.10",
+    "chromedriver": "^127.0.0",
+    "exceljs": "^4.4.0",
+    "geckodriver": "^4.4.1",
+    "mocha": "^10.7.3",
+    "mochawesome": "^7.1.3",
+    "selenium-webdriver": "^4.23.0",
+    "winston": "^3.14.2"
+  }
+}

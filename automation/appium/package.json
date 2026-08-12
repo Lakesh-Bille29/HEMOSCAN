@@ -1,0 +1,22 @@
+{
+  "name": "hemoscan-appium-automation",
+  "version": "2.0.0",
+  "description": "Enterprise Appium 2.x UiAutomator2 Native Android Automation Framework for HemoScan",
+  "main": "test/appium.spec.js",
+  "scripts": {
+    "test": "mocha test/appium.spec.js --timeout 120000 --reporter mochawesome --reporter-options reportDir=../../reports/appium,reportFilename=index",
+    "test:auth": "mocha test/appium.spec.js --grep 'Authentication' --timeout 120000",
+    "test:patient": "mocha test/appium.spec.js --grep 'Patient' --timeout 120000",
+    "test:upload": "mocha test/appium.spec.js --grep 'Upload' --timeout 120000"
+  },
+  "dependencies": {
+    "appium": "^2.11.0",
+    "appium-uiautomator2-driver": "^3.7.0",
+    "chai": "^4.3.10",
+    "exceljs": "^4.4.0",
+    "mocha": "^10.7.3",
+    "mochawesome": "^7.1.3",
+    "webdriverio": "^8.40.0",
+    "winston": "^3.14.2"
+  }
+}
