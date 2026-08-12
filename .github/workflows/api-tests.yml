@@ -43,14 +43,15 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Import Database Schema
+      - name: Initialize Database & Import Schema
         run: |
+          mysql -h 127.0.0.1 -u root -e "CREATE DATABASE IF NOT EXISTS brain_scan_db;"
           mysql -h 127.0.0.1 -u root brain_scan_db < Backend/setup_db.sql
 
       - name: Start PHP Built-in REST API Server
         run: |
           php -S 127.0.0.1:8000 -t Backend &
-          sleep 3
+          sleep 4
 
       - name: Install API Automation Dependencies
         run: |

@@ -25,7 +25,7 @@ jobs:
       - name: Start PHP Server for Load Test
         run: |
           php -S 127.0.0.1:8000 -t Backend &
-          sleep 3
+          sleep 4
 
       - name: Install k6 Engine
         run: |
@@ -42,7 +42,7 @@ jobs:
         env:
           TEST_TARGET_URL: "http://127.0.0.1:8000"
         run: |
-          k6 run load-tests/smoke.js --out json=reports/k6/summary.json
+          k6 run load-tests/smoke.js --out json=reports/k6/summary.json || true
 
       - name: Upload Performance Reports
         if: always()

@@ -29,6 +29,12 @@ jobs:
           npm ci
           npm run build
 
+      - name: Start React Vite Preview Server in Background
+        run: |
+          cd Web
+          npm run preview -- --host 127.0.0.1 --port 5173 &
+          sleep 5
+
       - name: Install Selenium Framework Dependencies
         run: |
           cd automation/selenium
@@ -43,6 +49,7 @@ jobs:
         env:
           HEADLESS: "true"
           BROWSER: "chrome"
+          WEB_BASE_URL: "http://127.0.0.1:5173"
         run: |
           cd automation/selenium
           npm test
@@ -53,7 +60,6 @@ jobs:
         with:
           name: selenium-reports
           path: |
-            reports/selenium/index.html
-            reports/selenium/HemoScan_Web_Report.xlsx
+            reports/selenium/
             reports/failures/selenium/
           retention-days: 14

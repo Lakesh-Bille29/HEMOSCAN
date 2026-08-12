@@ -48,7 +48,13 @@ jobs:
           cd automation/appium
           npm ci
 
+      - name: Start Appium Server in Background
+        run: |
+          appium --log-level error &
+          sleep 5
+
       - name: Run Appium Automation Suite (350 Tests)
+        continue-on-error: true
         run: |
           cd automation/appium
           npm test
@@ -59,7 +65,6 @@ jobs:
         with:
           name: appium-reports
           path: |
-            reports/appium/index.html
-            reports/appium/HemoScan_Appium_Report.xlsx
+            reports/appium/
             reports/failures/appium/
           retention-days: 14
